@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Nhân Viên Thị Trường</title>
+  <meta name="theme-color" content="#1e3a5f" />
+  <link rel="manifest" href="/static/manifest.json" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/app.css" />
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<!-- ── App Shell ── -->
+<div id="app">
+  <!-- Rendered by JS modules -->
+  <div id="loading-screen" class="fixed inset-0 flex items-center justify-center bg-blue-900 z-50">
+    <div class="text-center text-white">
+      <i class="fas fa-map-marker-alt text-5xl mb-4 animate-bounce"></i>
+      <h1 class="text-2xl font-bold mb-2">Nhân Viên Thị Trường</h1>
+      <p class="text-blue-200 text-sm">Đang tải...</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal Container ── -->
+<div id="modal-root"></div>
+<!-- ── Toast Container ── -->
+<div id="toast-root" class="fixed top-4 right-4 z-[9999] space-y-2 pointer-events-none"></div>
+
+<!-- ── JS Modules (thứ tự quan trọng) ── -->
+<script src="/static/js/config.js"></script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/toast.js"></script>
+<script src="/static/js/modal.js"></script>
+<script src="/static/js/camera.js"></script>
+<script src="/static/js/geo.js"></script>
+<script src="/static/js/watermark.js"></script>
+<script src="/static/js/auth.js"></script>
+<script src="/static/js/profile.js"></script>
+<script src="/static/js/checkin.js"></script>
+<script src="/static/js/admin.js"></script>
+<script src="/static/js/app.js"></script>
+</body>
+</html>

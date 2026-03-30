@@ -1,0 +1,121 @@
+// =============================================
+// Module: Profile Routes
+// GET  /api/profile
+// PUT  /api/profile
+// POST /api/profile/upload-cccd
+// =============================================
+
+import { Hono } from 'hono'
+import { ok, err } from '../lib/response'
+import { authMiddleware } from '../middleware/auth'
+import type { AuthUser } from '../middleware/auth'
+
+type Bindings = { DB: D1Database }
+type Variables = { user: AuthUser }
+
+const profile = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+
+// Tất cả routes đều cần auth
+profile.use('*', authMiddleware)
+
+// GET /api/profile - Lấy thông tin cá nhân
+profile.get('/', async (c) => {
+  const user = c.get('user')
+  const data = await c.env.DB.prepare(`
+    SELECT u.id, u.username, u.full_name, u.role,
+           p.cccd_number, p.cccd_full_name, p.cccd_dob, p.cccd_gender,
+           p.cccd_address, p.cccd_issue_date, p.cccd_expiry_date,
+           p.cccd_front_image, p.cccd_back_image,
+           p.bank_account_number, p.bank_name, p.bank_account_name, p.phone,
+           p.updated_at
+    FROM users u
+    LEFT JOIN profiles p ON p.user_id = u.id
+    WHERE u.id = ?
+  `).bind(user.id).first()
+
+  return c.json(ok(data))
+})
+
+// PUT /api/profile - Cập nhật thông tin cá nhân
+profile.put('/', async (c) => {
+  const user = c.get('user')
+  const body = await c.req.json()
+
+  const {
+    cccd_number, cccd_full_name, cccd_dob, cccd_gender,
+    cccd_address, cccd_issue_date, cccd_expiry_date,
+    bank_account_number, bank_name, bank_account_name, phone
+  } = body
+
+  // Upsert profile
+  const existing = await c.env.DB.prepare('SELECT id FROM profiles WHERE user_id = ?')
+    .bind(user.id).first<{ id: number }>()
+
+  if (existing) {
+    await c.env.DB.prepare(`
+      UPDATE profiles SET
+        cccd_number = ?, cccd_full_name = ?, cccd_dob = ?, cccd_gender = ?,
+        cccd_address = ?, cccd_issue_date = ?, cccd_expiry_date = ?,
+        bank_account_number = ?, bank_name = ?, bank_account_name = ?,
+        phone = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = ?
+    `).bind(
+      cccd_number, cccd_full_name, cccd_dob, cccd_gender,
+      cccd_address, cccd_issue_date, cccd_expiry_date,
+      bank_account_number, bank_name, bank_account_name,
+      phone, user.id
+    ).run()
+  } else {
+    await c.env.DB.prepare(`
+      INSERT INTO profiles (
+        user_id, cccd_number, cccd_full_name, cccd_dob, cccd_gender,
+        cccd_address, cccd_issue_date, cccd_expiry_date,
+        bank_account_number, bank_name, bank_account_name, phone
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      user.id, cccd_number, cccd_full_name, cccd_dob, cccd_gender,
+      cccd_address, cccd_issue_date, cccd_expiry_date,
+      bank_account_number, bank_name, bank_account_name, phone
+    ).run()
+  }
+
+  return c.json(ok(null, 'Cập nhật thông tin thành công'))
+})
+
+// POST /api/profile/upload-cccd - Upload ảnh CCCD (base64)
+profile.post('/upload-cccd', async (c) => {
+  const user = c.get('user')
+  const { front, back } = await c.req.json()
+
+  if (!front && !back) {
+    return c.json(err('Vui lòng cung cấp ít nhất một ảnh'), 400)
+  }
+
+  // Validate base64 size (max 5MB per image)
+  const MAX_SIZE = 5 * 1024 * 1024 * (4 / 3) // base64 inflate factor
+  if (front && front.length > MAX_SIZE) return c.json(err('Ảnh mặt trước quá lớn (tối đa 5MB)'), 400)
+  if (back && back.length > MAX_SIZE) return c.json(err('Ảnh mặt sau quá lớn (tối đa 5MB)'), 400)
+
+  // Ensure profile exists
+  const existing = await c.env.DB.prepare('SELECT id FROM profiles WHERE user_id = ?')
+    .bind(user.id).first<{ id: number }>()
+
+  if (existing) {
+    const updates: string[] = []
+    const values: unknown[] = []
+    if (front) { updates.push('cccd_front_image = ?'); values.push(front) }
+    if (back) { updates.push('cccd_back_image = ?'); values.push(back) }
+    updates.push('updated_at = CURRENT_TIMESTAMP')
+    values.push(user.id)
+    await c.env.DB.prepare(`UPDATE profiles SET ${updates.join(', ')} WHERE user_id = ?`)
+      .bind(...values).run()
+  } else {
+    await c.env.DB.prepare(
+      'INSERT INTO profiles (user_id, cccd_front_image, cccd_back_image) VALUES (?, ?, ?)'
+    ).bind(user.id, front ?? null, back ?? null).run()
+  }
+
+  return c.json(ok(null, 'Upload ảnh CCCD thành công'))
+})
+
+export default profile

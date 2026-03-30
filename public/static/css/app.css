@@ -1,0 +1,94 @@
+/* =============================================
+   Module: App CSS
+   Styles tùy chỉnh bổ sung Tailwind
+   ============================================= */
+
+/* Safe area cho notch/home indicator */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Ngăn double-tap zoom trên iOS */
+* {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Smooth transitions */
+#app {
+  transition: opacity 0.15s ease;
+}
+
+/* Photo slot hover */
+.photo-slot:hover {
+  transform: scale(1.02);
+  transition: transform 0.15s ease;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 2px;
+}
+
+/* Input focus ring fix */
+input:focus, select:focus, textarea:focus {
+  outline: none;
+}
+
+/* Animate bounce for loading */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+  50% { box-shadow: 0 0 0 12px rgba(59, 130, 246, 0); }
+}
+
+.checkin-btn-pulse {
+  animation: pulse-glow 2s infinite;
+}
+
+/* Modal transition */
+#modal-inner {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+/* Bottom nav safe area */
+.pb-nav {
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Aspect ratio helper */
+.aspect-cccd {
+  aspect-ratio: 1.586 / 1;
+}
+
+/* Image watermark preview */
+.photo-preview-container {
+  position: relative;
+}
+
+/* Disable user select on UI elements */
+button, .nav-btn {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Active state for mobile */
+button:active {
+  opacity: 0.85;
+}
+
+/* Toast animation */
+#toast-root > * {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
