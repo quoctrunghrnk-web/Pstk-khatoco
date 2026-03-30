@@ -4,56 +4,60 @@
 // =============================================
 window.App = (() => {
   let _currentPage = null
-  let _clockInterval = null
 
   const PAGES = {
     login: {
       render: () => Auth.renderLoginPage(),
-      bind: () => Auth.bindLoginEvents(),
+      bind:   () => Auth.bindLoginEvents(),
       requireAuth: false,
       showNav: false,
     },
     home: {
       render: () => CheckinModule.renderPage(),
-      bind: () => CheckinModule.bindEvents(),
+      bind:   () => CheckinModule.bindEvents(),
       requireAuth: true,
+      staffOnly: true,   // chỉ nhân viên
       showNav: true,
     },
     profile: {
       render: () => ProfileModule.renderPage(),
-      bind: () => ProfileModule.bindEvents(),
+      bind:   () => ProfileModule.bindEvents(),
       requireAuth: true,
+      staffOnly: true,   // chỉ nhân viên
       showNav: true,
     },
     admin: {
       render: () => AdminModule.renderPage(),
-      bind: () => AdminModule.bindEvents(),
+      bind:   () => AdminModule.bindEvents(),
       requireAuth: true,
-      adminOnly: true,
+      adminOnly: true,   // chỉ admin
       showNav: true,
     },
   }
 
   function navigate(page) {
-    // Clear previous clock if any
-    if (_clockInterval) { clearInterval(_clockInterval); _clockInterval = null }
-
     const config = PAGES[page]
-    if (!config) { navigate('home'); return }
+    if (!config) { navigate(_defaultPage()); return }
 
     // Auth guard
     if (config.requireAuth && !Auth.isLoggedIn()) {
-      render('login')
-      return
+      render('login'); return
     }
 
-    // Admin guard
+    // Admin-only guard
     if (config.adminOnly) {
       const user = Auth.getUser()
       if (!user || user.role !== 'admin') {
         Toast.error('Không có quyền truy cập')
-        navigate('home')
-        return
+        navigate('home'); return
+      }
+    }
+
+    // Staff-only guard (admin không vào được trang staff)
+    if (config.staffOnly) {
+      const user = Auth.getUser()
+      if (user?.role === 'admin') {
+        navigate('admin'); return
       }
     }
 
@@ -61,23 +65,25 @@ window.App = (() => {
     render(page)
   }
 
+  // Trang mặc định sau login tuỳ role
+  function _defaultPage() {
+    const user = Auth.getUser()
+    return user?.role === 'admin' ? 'admin' : 'home'
+  }
+
   function render(page) {
     const config = PAGES[page]
     const app = document.getElementById('app')
     const loading = document.getElementById('loading-screen')
 
-    // Hide loading screen
     if (loading) loading.style.display = 'none'
 
-    // Render page
     app.innerHTML = config.render()
 
-    // Bottom navigation
     if (config.showNav) {
       app.innerHTML += renderBottomNav(page)
     }
 
-    // Bind events (async)
     if (config.bind) {
       Promise.resolve(config.bind()).catch(e => {
         console.error('bind error:', e)
@@ -85,7 +91,6 @@ window.App = (() => {
       })
     }
 
-    // Bind nav events
     if (config.showNav) {
       bindNavEvents()
     }
@@ -93,24 +98,31 @@ window.App = (() => {
 
   function renderBottomNav(activePage) {
     const user = Auth.getUser()
-    const navItems = [
-      { id: 'home', icon: 'fa-map-marker-alt', label: 'Check-in', page: 'home' },
-      { id: 'profile', icon: 'fa-user-circle', label: 'Hồ sơ', page: 'profile' },
-    ]
+    let navItems = []
 
     if (user?.role === 'admin') {
-      navItems.push({ id: 'admin', icon: 'fa-shield-alt', label: 'Quản trị', page: 'admin' })
+      // Admin chỉ thấy đúng 1 tab Quản trị
+      navItems = [
+        { icon: 'fa-shield-alt', label: 'Quản trị', page: 'admin' },
+      ]
+    } else {
+      // Nhân viên: Check-in + Hồ sơ
+      navItems = [
+        { icon: 'fa-map-marker-alt', label: 'Check-in', page: 'home' },
+        { icon: 'fa-user-circle',    label: 'Hồ sơ',    page: 'profile' },
+      ]
     }
 
     return `
     <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-2xl z-50 safe-area-bottom">
       <div class="flex items-stretch max-w-lg mx-auto">
         ${navItems.map(item => `
-          <button class="nav-btn flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-colors ${activePage === item.page ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'}"
-                  data-page="${item.page}">
+          <button class="nav-btn flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-colors
+            ${activePage === item.page ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'}"
+            data-page="${item.page}">
             <i class="fas ${item.icon} text-xl"></i>
             <span class="text-xs font-medium">${item.label}</span>
-            ${activePage === item.page ? '<span class="w-1 h-1 bg-blue-600 rounded-full"></span>' : ''}
+            ${activePage === item.page ? '<span class="w-1.5 h-1.5 bg-blue-600 rounded-full"></span>' : '<span class="w-1.5 h-1.5"></span>'}
           </button>
         `).join('')}
       </div>
@@ -124,11 +136,9 @@ window.App = (() => {
   }
 
   async function init() {
-    // Show loading for 1s then redirect
-    await new Promise(r => setTimeout(r, 800))
-
+    await new Promise(r => setTimeout(r, 700))
     if (Auth.isLoggedIn()) {
-      navigate('home')
+      navigate(_defaultPage())
     } else {
       navigate('login')
     }
@@ -138,6 +148,4 @@ window.App = (() => {
 })()
 
 // ── Boot ──────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  App.init()
-})
+document.addEventListener('DOMContentLoaded', () => App.init())

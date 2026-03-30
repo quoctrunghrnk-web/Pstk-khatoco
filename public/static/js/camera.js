@@ -88,9 +88,12 @@ window.Camera = (() => {
    * @param {number} max - Số ảnh tối đa
    * @param {object} opts - Tùy chọn
    * @param {function} onChange - Callback khi danh sách ảnh thay đổi
+   * @param {Array} initialPhotos - Ảnh có sẵn (optional)
    */
-  function createPhotoGrid(container, max, opts = {}, onChange) {
-    let photos = new Array(max).fill(null)
+  function createPhotoGrid(container, max, opts = {}, onChange, initialPhotos = null) {
+    let photos = initialPhotos && initialPhotos.length === max
+      ? [...initialPhotos]
+      : new Array(max).fill(null)
 
     function render() {
       container.innerHTML = photos.map((p, i) => `
