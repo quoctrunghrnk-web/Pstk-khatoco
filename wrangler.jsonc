@@ -1,14 +1,14 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "webapp",
+  "name": "nhan-vien-thi-truong",
   "compatibility_date": "2026-03-30",
   "pages_build_output_dir": "./dist",
   "compatibility_flags": ["nodejs_compat"],
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "webapp-production",
-      "database_id": "local-dev-placeholder"
+      "database_name": "nhan-vien-thi-truong-db",
+      "database_id": "8557d955-d458-4979-a515-41d1a47079d6"
     }
   ]
 }
