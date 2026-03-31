@@ -42,6 +42,19 @@ window.ProfileModule = (() => {
         <div id="profile-content" class="hidden space-y-4">
 
           <!-- CCCD -->
+          <!-- Tỉnh/thành làm việc -->
+          <div id="province-card" class="bg-white rounded-2xl shadow overflow-hidden">
+            <div class="bg-indigo-50 px-4 py-3 flex items-center justify-between">
+              <h3 class="font-semibold text-indigo-800 flex items-center gap-2">
+                <i class="fas fa-map-marker-alt"></i> Khu vực làm việc
+              </h3>
+              <button id="btn-edit-province" class="text-indigo-600 text-sm font-medium">
+                <i class="fas fa-edit"></i> Sửa
+              </button>
+            </div>
+            <div id="province-info" class="p-4"></div>
+          </div>
+
           <div class="bg-white rounded-2xl shadow overflow-hidden">
             <div class="bg-blue-50 px-4 py-3 flex items-center justify-between">
               <h3 class="font-semibold text-blue-800 flex items-center gap-2">
@@ -130,6 +143,17 @@ window.ProfileModule = (() => {
   function populateProfileUI(data) {
     if (!data) return
 
+    // Province info
+    const provinceEl = document.getElementById('province-info')
+    if (provinceEl) {
+      provinceEl.innerHTML = data.province
+        ? `<div class="flex items-center gap-2">
+             <i class="fas fa-map-marker-alt text-indigo-500"></i>
+             <span class="text-gray-800 font-medium">${data.province}</span>
+           </div>`
+        : `<p class="text-gray-400 text-sm italic">Chưa cập nhật tỉnh/thành phố</p>`
+    }
+
     // CCCD info
     document.getElementById('cccd-info').innerHTML = [
       renderInfoRow('Số CCCD', data.cccd_number),
@@ -159,6 +183,45 @@ window.ProfileModule = (() => {
     if (data.cccd_back_image) {
       backEl.innerHTML = `<img src="${data.cccd_back_image}" class="w-full h-full object-cover" />`
       backEl.classList.remove('border-dashed')
+    }
+  }
+
+  function showEditProvinceModal(data) {
+    const { close } = Modal.create(`
+      <div class="p-5">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">
+          <i class="fas fa-map-marker-alt mr-2 text-indigo-600"></i>Khu vực làm việc
+        </h3>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Tỉnh/Thành phố</label>
+          <select id="province-select"
+            class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+            ${window.PROVINCES_OPTIONS ? window.PROVINCES_OPTIONS(data?.province || '') : ''}
+          </select>
+        </div>
+        <p id="province-err" class="text-red-500 text-sm mb-3 hidden"></p>
+        <div class="flex gap-3">
+          <button id="province-cancel" class="flex-1 py-2.5 border rounded-xl text-gray-700">Hủy</button>
+          <button id="province-save" class="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl font-medium">Lưu</button>
+        </div>
+      </div>
+    `)
+    document.getElementById('province-cancel').onclick = close
+    document.getElementById('province-save').onclick = async () => {
+      const province = document.getElementById('province-select').value
+      if (!province) {
+        document.getElementById('province-err').textContent = 'Vui lòng chọn tỉnh/thành phố'
+        document.getElementById('province-err').classList.remove('hidden')
+        return
+      }
+      try {
+        await API.updateProfile({ ..._profileData, province })
+        Toast.success('Cập nhật khu vực thành công')
+        close()
+        await refreshProfile()
+      } catch (e) {
+        Toast.error(e.message)
+      }
     }
   }
 
@@ -275,6 +338,7 @@ window.ProfileModule = (() => {
       document.getElementById('profile-loading').innerHTML = `<p class="text-red-500 text-sm">${e.message}</p>`
     }
 
+    document.getElementById('btn-edit-province').onclick = () => showEditProvinceModal(_profileData)
     document.getElementById('btn-edit-cccd').onclick = () => showEditCCCDModal(_profileData)
     document.getElementById('btn-edit-bank').onclick = () => showEditBankModal(_profileData)
     document.getElementById('btn-change-password').onclick = () => Auth.showChangePasswordModal()

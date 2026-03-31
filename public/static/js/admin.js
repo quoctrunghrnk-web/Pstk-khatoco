@@ -1,6 +1,7 @@
 // =============================================
 // Module: Admin Panel (Chỉ admin)
 // Quản lý nhân viên + xem báo cáo check-in
+// + Lọc theo tỉnh/thành phố + Xuất PDF
 // =============================================
 window.AdminModule = (() => {
 
@@ -9,6 +10,24 @@ window.AdminModule = (() => {
     try {
       return new Date(isoStr).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })
     } catch { return '--' }
+  }
+
+  function formatDateTime(isoStr) {
+    if (!isoStr) return '--'
+    try {
+      return new Date(isoStr).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    } catch { return '--' }
+  }
+
+  // ── Province select HTML helper ──────────────
+  function provinceSelect(id, selected = '', allLabel = 'Tất cả tỉnh/thành') {
+    const opts = (window.PROVINCES || []).map(p =>
+      `<option value="${p}" ${p === selected ? 'selected' : ''}>${p}</option>`
+    ).join('')
+    return `<select id="${id}" class="w-full px-3 py-2 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-400 bg-white">
+      <option value="">${allLabel}</option>
+      ${opts}
+    </select>`
   }
 
   function renderPage() {
@@ -55,6 +74,20 @@ window.AdminModule = (() => {
             <i class="fas fa-plus"></i> Thêm
           </button>
         </div>
+
+        <!-- Filter tỉnh (staff) -->
+        <div class="bg-white rounded-2xl shadow p-3">
+          <div class="flex gap-2 items-center">
+            <div class="flex-1">
+              <label class="block text-xs text-gray-500 mb-1"><i class="fas fa-map-marker-alt mr-1"></i>Lọc theo tỉnh/thành</label>
+              ${provinceSelect('staff-province-filter')}
+            </div>
+            <button id="btn-filter-staff" class="mt-5 px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-medium">
+              <i class="fas fa-filter"></i>
+            </button>
+          </div>
+        </div>
+
         <div id="users-list">
           <div class="flex justify-center py-8"><i class="fas fa-spinner fa-spin text-red-400 text-2xl"></i></div>
         </div>
@@ -64,16 +97,45 @@ window.AdminModule = (() => {
       <div id="admin-tab-reports" class="px-4 space-y-3 hidden">
         <!-- Filter -->
         <div class="bg-white rounded-2xl shadow p-4">
-          <div class="flex gap-2 items-end">
-            <div class="flex-1">
-              <label class="block text-sm text-gray-600 mb-1">Chọn ngày</label>
+          <h4 class="text-sm font-semibold text-gray-700 mb-3"><i class="fas fa-filter mr-1 text-red-500"></i>Bộ lọc báo cáo</h4>
+          <div class="space-y-2">
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Ngày báo cáo</label>
               <input type="date" id="report-date" class="w-full px-3 py-2 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500" />
             </div>
-            <button id="btn-load-report" class="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-medium">
-              <i class="fas fa-search"></i>
-            </button>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1"><i class="fas fa-map-marker-alt mr-1"></i>Tỉnh/Thành phố</label>
+              ${provinceSelect('report-province-filter')}
+            </div>
+            <div class="flex gap-2 pt-1">
+              <button id="btn-load-report" class="flex-1 py-2 bg-red-600 text-white rounded-xl text-sm font-medium">
+                <i class="fas fa-search mr-1"></i>Xem báo cáo
+              </button>
+              <button id="btn-export-pdf" class="flex-1 py-2 bg-green-600 text-white rounded-xl text-sm font-medium" disabled>
+                <i class="fas fa-file-pdf mr-1"></i>Xuất PDF
+              </button>
+            </div>
           </div>
         </div>
+
+        <!-- Summary bar -->
+        <div id="report-summary" class="hidden bg-white rounded-2xl shadow p-4">
+          <div class="grid grid-cols-3 gap-2 text-center text-sm">
+            <div class="bg-blue-50 rounded-xl p-2">
+              <p class="text-xs text-blue-500 mb-0.5">NV chấm công</p>
+              <p id="sum-staff" class="font-bold text-blue-700 text-lg">-</p>
+            </div>
+            <div class="bg-green-50 rounded-xl p-2">
+              <p class="text-xs text-green-500 mb-0.5">Hoàn thành</p>
+              <p id="sum-done" class="font-bold text-green-700 text-lg">-</p>
+            </div>
+            <div class="bg-orange-50 rounded-xl p-2">
+              <p class="text-xs text-orange-500 mb-0.5">Tổng bán</p>
+              <p id="sum-sales" class="font-bold text-orange-700 text-lg">-</p>
+            </div>
+          </div>
+        </div>
+
         <div id="report-list">
           <p class="text-center text-gray-400 text-sm py-8">Chọn ngày để xem báo cáo</p>
         </div>
@@ -88,14 +150,12 @@ window.AdminModule = (() => {
       return '<span class="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 font-medium">Chờ kích hoạt</span>'
     if (u.account_status === 'resigned')
       return '<span class="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-500">Đã nghỉ việc</span>'
-    // active
     return '<span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">Đang làm việc</span>'
   }
 
   // ── Nút hành động theo trạng thái ───────────
   function actionButtons(u) {
     if (u.role === 'admin') {
-      // Admin chỉ hiện reset PW
       return `
         <button onclick="AdminModule.showResetPassword(${u.id},'${u.full_name.replace(/'/g,"\\'")}','${u.username}')"
           class="p-2 text-yellow-600 bg-yellow-50 rounded-lg hover:bg-yellow-100" title="Reset mật khẩu">
@@ -105,7 +165,6 @@ window.AdminModule = (() => {
 
     const btns = []
 
-    // Nút Kích hoạt (nếu pending hoặc resigned)
     if (u.account_status !== 'active') {
       btns.push(`
         <button onclick="AdminModule.setUserStatus(${u.id},'active','${u.full_name.replace(/'/g,"\\'")}' )"
@@ -114,7 +173,6 @@ window.AdminModule = (() => {
         </button>`)
     }
 
-    // Nút Đã nghỉ việc (nếu đang active hoặc pending)
     if (u.account_status !== 'resigned') {
       btns.push(`
         <button onclick="AdminModule.setUserStatus(${u.id},'resigned','${u.full_name.replace(/'/g,"\\'")}' )"
@@ -123,7 +181,6 @@ window.AdminModule = (() => {
         </button>`)
     }
 
-    // Nút reset PW
     btns.push(`
       <button onclick="AdminModule.showResetPassword(${u.id},'${u.full_name.replace(/'/g,"\\'")}','${u.username}')"
         class="p-2 text-yellow-600 bg-yellow-50 rounded-lg hover:bg-yellow-100" title="Reset mật khẩu">
@@ -133,17 +190,16 @@ window.AdminModule = (() => {
     return btns.join('')
   }
 
-  async function loadUsers() {
+  async function loadUsers(province = '') {
     const el = document.getElementById('users-list')
     try {
-      const res = await API.getUsers()
+      const res = await API.getUsers(province ? { province } : {})
       const users = res.data || []
       if (users.length === 0) {
-        el.innerHTML = '<p class="text-center text-gray-400 py-8">Chưa có nhân viên</p>'
+        el.innerHTML = '<p class="text-center text-gray-400 py-8">Chưa có nhân viên' + (province ? ` ở <b>${province}</b>` : '') + '</p>'
         return
       }
 
-      // Nhóm theo trạng thái để nổi bật pending lên đầu
       const pending  = users.filter(u => u.account_status === 'pending')
       const active   = users.filter(u => u.account_status === 'active' || !u.account_status)
       const resigned = users.filter(u => u.account_status === 'resigned')
@@ -172,6 +228,7 @@ window.AdminModule = (() => {
                         ${u.role === 'admin' ? 'Admin' : 'NV'}
                       </span>
                       ${statusBadge(u)}
+                      ${u.province ? `<span class="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600"><i class="fas fa-map-marker-alt mr-0.5 text-xs"></i>${u.province}</span>` : ''}
                       ${u.phone ? `<span class="text-xs text-gray-400"><i class="fas fa-phone mr-0.5"></i>${u.phone}</span>` : ''}
                     </div>
                   </div>
@@ -194,24 +251,52 @@ window.AdminModule = (() => {
     }
   }
 
-  async function loadReport(date) {
+  // ── _lastReportData: lưu để xuất PDF ────────
+  let _lastReportData = null
+  let _lastReportDate = ''
+  let _lastReportProvince = ''
+
+  async function loadReport(date, province = '') {
     const el = document.getElementById('report-list')
+    const summaryEl = document.getElementById('report-summary')
     el.innerHTML = '<div class="flex justify-center py-8"><i class="fas fa-spinner fa-spin text-red-400 text-2xl"></i></div>'
+    summaryEl.classList.add('hidden')
+    document.getElementById('btn-export-pdf').disabled = true
+
     try {
-      const res = await API.getAdminCheckins(date)
+      const params = { date, limit: 200 }
+      if (province) params.province = province
+      const res = await API.getAdminCheckins(date, params)
       const records = res.data || []
+
+      _lastReportData = records
+      _lastReportDate = date
+      _lastReportProvince = province
+
+      // Summary
+      const done = records.filter(r => r.status === 'checkout').length
+      const totalSales = records.reduce((s, r) => s + (parseInt(r.sales_quantity) || 0), 0)
+      document.getElementById('sum-staff').textContent = records.length
+      document.getElementById('sum-done').textContent = done
+      document.getElementById('sum-sales').textContent = totalSales
+      summaryEl.classList.remove('hidden')
+
       if (records.length === 0) {
-        el.innerHTML = '<p class="text-center text-gray-400 py-8">Không có dữ liệu ngày này</p>'; return
+        el.innerHTML = '<p class="text-center text-gray-400 py-8">Không có dữ liệu ngày này</p>'
+        return
       }
+
+      document.getElementById('btn-export-pdf').disabled = false
+
       el.innerHTML = records.map(r => `
         <div class="bg-white rounded-2xl shadow p-4 cursor-pointer hover:shadow-md transition-shadow" onclick="AdminModule.showCheckinDetail(${r.id})">
           <div class="flex items-center gap-3 mb-2">
             <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
               <i class="fas fa-user text-blue-600"></i>
             </div>
-            <div class="flex-1">
+            <div class="flex-1 min-w-0">
               <p class="font-semibold text-gray-800">${r.full_name}</p>
-              <p class="text-xs text-gray-500">@${r.username}</p>
+              <p class="text-xs text-gray-500">@${r.username}${r.province ? ` · <i class="fas fa-map-marker-alt"></i> ${r.province}` : ''}</p>
             </div>
             <span class="text-xs px-2 py-1 rounded-full ${r.status === 'checkout' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">
               ${r.status === 'checkout' ? 'Hoàn thành' : 'Đang làm'}
@@ -220,7 +305,7 @@ window.AdminModule = (() => {
           <div class="grid grid-cols-2 gap-2 text-xs text-gray-500 mt-2">
             <span><i class="fas fa-sign-in-alt mr-1 text-blue-400"></i>CI: ${formatTime(r.checkin_time)}</span>
             <span><i class="fas fa-sign-out-alt mr-1 text-purple-400"></i>CO: ${formatTime(r.checkout_time)}</span>
-            ${r.sales_quantity ? `<span class="col-span-2"><i class="fas fa-box mr-1 text-green-400"></i>Bán: <b>${r.sales_quantity}</b> SP</span>` : ''}
+            ${r.sales_quantity != null ? `<span class="col-span-2"><i class="fas fa-box mr-1 text-green-400"></i>Bán: <b>${r.sales_quantity}</b> SP${r.notes ? ` · ${r.notes}` : ''}</span>` : ''}
           </div>
         </div>
       `).join('')
@@ -229,7 +314,248 @@ window.AdminModule = (() => {
     }
   }
 
+  // ── Xuất PDF ─────────────────────────────────
+  // Dùng window.print() với trang in chuyên dụng trong iframe ẩn
+  async function exportPDF() {
+    if (!_lastReportData || !_lastReportData.length) {
+      Toast.error('Không có dữ liệu để xuất PDF')
+      return
+    }
+
+    const btn = document.getElementById('btn-export-pdf')
+    btn.disabled = true
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Đang tạo PDF...'
+    Toast.info('Đang chuẩn bị báo cáo...')
+
+    try {
+      const html = buildPrintHTML(_lastReportData, _lastReportDate, _lastReportProvince)
+
+      // Mở cửa sổ in mới
+      const win = window.open('', '_blank', 'width=900,height=700')
+      if (!win) {
+        Toast.error('Trình duyệt đã chặn cửa sổ mới. Vui lòng cho phép popup.')
+        return
+      }
+      win.document.write(html)
+      win.document.close()
+      win.focus()
+      // Đợi ảnh load xong rồi mới in
+      win.onload = () => {
+        setTimeout(() => {
+          win.print()
+        }, 800)
+      }
+    } finally {
+      btn.disabled = false
+      btn.innerHTML = '<i class="fas fa-file-pdf mr-1"></i>Xuất PDF'
+    }
+  }
+
+  function buildPrintHTML(records, date, province) {
+    const dateVN = new Date(date + 'T00:00:00+07:00').toLocaleDateString('vi-VN', {
+      weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric'
+    })
+    const totalSales = records.reduce((s, r) => s + (parseInt(r.sales_quantity) || 0), 0)
+    const done = records.filter(r => r.status === 'checkout').length
+
+    // Hàm tạo ảnh inline (chỉ hiện nếu có)
+    const imgCell = (src, label) => src
+      ? `<div class="img-cell"><p class="img-label">${label}</p><img src="${src}" /></div>`
+      : `<div class="img-cell empty"><p class="img-label">${label}</p><div class="img-empty"></div></div>`
+
+    const rows = records.map((r, i) => {
+      const actImgs = [r.activity_image1, r.activity_image2, r.activity_image3, r.activity_image4].filter(Boolean)
+      return `
+      <div class="staff-block">
+        <div class="staff-header">
+          <span class="staff-no">${i + 1}</span>
+          <div class="staff-info">
+            <strong>${r.full_name}</strong>
+            <span class="staff-sub">@${r.username}${r.province ? ' · ' + r.province : ''}</span>
+          </div>
+          <span class="status-badge ${r.status === 'checkout' ? 'done' : 'progress'}">
+            ${r.status === 'checkout' ? 'Hoàn thành' : 'Đang làm'}
+          </span>
+        </div>
+
+        <div class="info-row">
+          <div class="info-item">
+            <span class="info-label">Check-in</span>
+            <span class="info-value">${formatTime(r.checkin_time)}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Check-out</span>
+            <span class="info-value">${formatTime(r.checkout_time)}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Số bán</span>
+            <span class="info-value sales">${r.sales_quantity ?? '--'} SP</span>
+          </div>
+        </div>
+
+        ${r.checkin_address || r.checkout_address ? `
+        <div class="addr-row">
+          ${r.checkin_address ? `<p><b>Địa chỉ CI:</b> ${r.checkin_address}</p>` : ''}
+          ${r.checkout_address ? `<p><b>Địa chỉ CO:</b> ${r.checkout_address}</p>` : ''}
+        </div>` : ''}
+
+        ${r.notes ? `<div class="notes-row"><b>Ghi chú:</b> ${r.notes}</div>` : ''}
+
+        <div class="photos-section">
+          <div class="photos-group">
+            <p class="photos-title">Ảnh Check-in</p>
+            <div class="photos-row">
+              ${imgCell(r.checkin_image1, 'CI-1')}
+              ${imgCell(r.checkin_image2, 'CI-2')}
+            </div>
+          </div>
+
+          ${actImgs.length > 0 ? `
+          <div class="photos-group">
+            <p class="photos-title">Ảnh hoạt động</p>
+            <div class="photos-row">
+              ${actImgs.map((img, idx) => imgCell(img, `HĐ-${idx + 1}`)).join('')}
+            </div>
+          </div>` : ''}
+
+          <div class="photos-group">
+            <p class="photos-title">Ảnh Check-out</p>
+            <div class="photos-row">
+              ${imgCell(r.checkout_image1, 'CO-1')}
+              ${imgCell(r.checkout_image2, 'CO-2')}
+            </div>
+          </div>
+        </div>
+      </div>`
+    }).join('')
+
+    return `<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Báo cáo ${date}${province ? ' - ' + province : ''}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; font-size: 12px; color: #1a1a1a; background: #fff; }
+
+    .page-header {
+      background: linear-gradient(135deg, #b91c1c, #7f1d1d);
+      color: #fff;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+    }
+    .page-title { font-size: 18px; font-weight: bold; margin-bottom: 4px; }
+    .page-sub { font-size: 12px; opacity: 0.85; }
+    .page-summary {
+      display: flex; gap: 12px; margin-top: 10px;
+    }
+    .sum-item {
+      background: rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 6px 12px;
+      text-align: center;
+      min-width: 80px;
+    }
+    .sum-label { font-size: 10px; opacity: 0.8; }
+    .sum-val { font-size: 16px; font-weight: bold; }
+
+    .staff-block {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      margin: 0 12px 16px 12px;
+      overflow: hidden;
+      page-break-inside: avoid;
+    }
+    .staff-header {
+      display: flex; align-items: center; gap: 10px;
+      background: #f3f4f6; padding: 10px 12px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .staff-no {
+      width: 24px; height: 24px; background: #dc2626; color: #fff;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-weight: bold; font-size: 11px; flex-shrink: 0;
+    }
+    .staff-info { flex: 1; }
+    .staff-info strong { font-size: 13px; display: block; }
+    .staff-sub { font-size: 10px; color: #6b7280; }
+    .status-badge {
+      font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 600;
+    }
+    .status-badge.done { background: #d1fae5; color: #065f46; }
+    .status-badge.progress { background: #fef3c7; color: #92400e; }
+
+    .info-row {
+      display: flex; gap: 8px; padding: 8px 12px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .info-item { flex: 1; text-align: center; }
+    .info-label { font-size: 9px; color: #9ca3af; display: block; margin-bottom: 2px; text-transform: uppercase; }
+    .info-value { font-size: 13px; font-weight: 600; color: #374151; }
+    .info-value.sales { color: #059669; }
+
+    .addr-row {
+      padding: 6px 12px; font-size: 10px; color: #6b7280;
+      border-bottom: 1px solid #f3f4f6; line-height: 1.6;
+    }
+    .notes-row {
+      padding: 6px 12px; font-size: 10px; color: #6b7280;
+      border-bottom: 1px solid #f3f4f6; font-style: italic;
+    }
+
+    .photos-section { padding: 8px 12px 10px; }
+    .photos-group { margin-bottom: 8px; }
+    .photos-title { font-size: 9px; color: #9ca3af; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
+    .photos-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .img-cell { text-align: center; }
+    .img-label { font-size: 9px; color: #9ca3af; margin-bottom: 2px; }
+    .img-cell img { width: 120px; height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid #e5e7eb; }
+    .img-empty { width: 120px; height: 90px; background: #f9fafb; border-radius: 6px; border: 1px dashed #d1d5db; }
+
+    .page-footer {
+      text-align: center; padding: 12px; font-size: 10px; color: #9ca3af;
+      border-top: 1px solid #e5e7eb; margin-top: 8px;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .staff-block { page-break-inside: avoid; }
+      @page { margin: 10mm; size: A4; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <div class="page-title">Báo cáo chấm công nhân viên</div>
+    <div class="page-sub">${dateVN}${province ? ' · ' + province : ' · Tất cả tỉnh/thành'}</div>
+    <div class="page-summary">
+      <div class="sum-item">
+        <div class="sum-label">Nhân viên</div>
+        <div class="sum-val">${records.length}</div>
+      </div>
+      <div class="sum-item">
+        <div class="sum-label">Hoàn thành</div>
+        <div class="sum-val">${done}</div>
+      </div>
+      <div class="sum-item">
+        <div class="sum-label">Tổng bán</div>
+        <div class="sum-val">${totalSales} SP</div>
+      </div>
+    </div>
+  </div>
+
+  ${rows || '<p style="text-align:center;padding:40px;color:#9ca3af">Không có dữ liệu</p>'}
+
+  <div class="page-footer">
+    Báo cáo được tạo tự động · ${new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+  </div>
+</body>
+</html>`
+  }
+
   function showAddUserModal() {
+    const provincesOpts = window.PROVINCES_OPTIONS ? window.PROVINCES_OPTIONS() : ''
     const { overlay, close } = Modal.create(`
       <div class="p-5">
         <h3 class="text-lg font-bold text-gray-800 mb-4"><i class="fas fa-user-plus mr-2 text-red-600"></i>Thêm nhân viên</h3>
@@ -240,6 +566,11 @@ window.AdminModule = (() => {
             <input type="text" name="username" class="w-full px-3 py-2 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500" required /></div>
           <div><label class="block text-sm text-gray-600 mb-1">Mật khẩu</label>
             <input type="password" name="password" class="w-full px-3 py-2 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500" required /></div>
+          <div><label class="block text-sm text-gray-600 mb-1">Tỉnh/Thành phố</label>
+            <select name="province" class="w-full px-3 py-2 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500">
+              <option value="">-- Chọn tỉnh/thành --</option>
+              ${provincesOpts}
+            </select></div>
           <div><label class="block text-sm text-gray-600 mb-1">Vai trò</label>
             <select name="role" class="w-full px-3 py-2 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500">
               <option value="staff">Nhân viên</option>
@@ -320,7 +651,9 @@ window.AdminModule = (() => {
         try {
           await API.updateUserStatus(userId, newStatus)
           Toast.success(`Đã cập nhật: ${labels[newStatus]}`)
-          await loadUsers()
+          // Giữ nguyên filter hiện tại
+          const prov = document.getElementById('staff-province-filter')?.value || ''
+          await loadUsers(prov)
         } catch (e) { Toast.error(e.message) }
       },
       'Xác nhận',
@@ -339,7 +672,8 @@ window.AdminModule = (() => {
     Modal.create(`
       <div class="p-5">
         <h3 class="text-lg font-bold text-gray-800 mb-1">${r.full_name}</h3>
-        <p class="text-sm text-gray-500 mb-4">${r.date}</p>
+        <p class="text-sm text-gray-500 mb-1">${r.date}</p>
+        ${r.province ? `<p class="text-xs text-indigo-500 mb-3"><i class="fas fa-map-marker-alt mr-1"></i>${r.province}</p>` : '<div class="mb-3"></div>'}
         <div class="space-y-3">
           <div class="grid grid-cols-2 gap-2 text-sm">
             <div class="bg-blue-50 rounded-lg p-2 text-center">
@@ -353,7 +687,7 @@ window.AdminModule = (() => {
               <p class="text-xs text-purple-400 break-all">${r.checkout_address || '--'}</p>
             </div>
           </div>
-          ${r.sales_quantity ? `<p class="text-sm font-medium"><i class="fas fa-box mr-1 text-green-500"></i>Bán: ${r.sales_quantity} SP</p>` : ''}
+          ${r.sales_quantity != null ? `<p class="text-sm font-medium"><i class="fas fa-box mr-1 text-green-500"></i>Bán: ${r.sales_quantity} SP</p>` : ''}
           ${r.notes ? `<p class="text-sm text-gray-600"><i class="fas fa-sticky-note mr-1"></i>${r.notes}</p>` : ''}
           <div class="grid grid-cols-2 gap-2">
             ${imgRow('Check-in 1', r.checkin_image1)}
@@ -393,31 +727,33 @@ window.AdminModule = (() => {
 
     // Đăng xuất admin
     document.getElementById('btn-admin-logout').onclick = () => {
-      Modal.confirm(
-        'Đăng xuất',
-        'Bạn có chắc muốn đăng xuất?',
-        () => Auth.logout(),
-        'Đăng xuất',
-        true   // nút xác nhận màu đỏ
-      )
+      Modal.confirm('Đăng xuất', 'Bạn có chắc muốn đăng xuất?', () => Auth.logout(), 'Đăng xuất', true)
     }
 
     // Đổi mật khẩu admin
-    document.getElementById('btn-admin-change-pw').onclick = () => {
-      Auth.showChangePasswordModal()
-    }
+    document.getElementById('btn-admin-change-pw').onclick = () => Auth.showChangePasswordModal()
 
     // Add user
     document.getElementById('btn-add-user').onclick = showAddUserModal
 
-    // Report date
+    // Filter staff by province
+    document.getElementById('btn-filter-staff').onclick = () => {
+      const prov = document.getElementById('staff-province-filter').value
+      loadUsers(prov)
+    }
+
+    // Report date default = today VN
     const today = new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10)
     document.getElementById('report-date').value = today
 
     document.getElementById('btn-load-report').onclick = () => {
       const date = document.getElementById('report-date').value
-      if (date) loadReport(date)
+      const prov = document.getElementById('report-province-filter').value
+      if (date) loadReport(date, prov)
     }
+
+    // Export PDF
+    document.getElementById('btn-export-pdf').onclick = exportPDF
 
     // Auto-load
     loadUsers()

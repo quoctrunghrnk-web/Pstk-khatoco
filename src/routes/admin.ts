@@ -26,21 +26,26 @@ admin.use('*', authMiddleware, adminMiddleware)
 
 // ── GET /api/admin/users ──────────────────────────────────────────────────
 admin.get('/users', async (c) => {
-  const users = await c.env.DB.prepare(`
+  const province = c.req.query('province')
+  let usersQuery = `
     SELECT u.id, u.username, u.full_name, u.role, u.is_active,
-           u.account_status, u.created_at,
+           u.account_status, u.province, u.created_at,
            p.phone, p.cccd_number, p.bank_name, p.bank_account_number
     FROM users u
     LEFT JOIN profiles p ON p.user_id = u.id
-    ORDER BY
-      CASE u.account_status
-        WHEN 'pending'  THEN 0
-        WHEN 'active'   THEN 1
-        WHEN 'resigned' THEN 2
-        ELSE 3
-      END,
-      u.created_at DESC
-  `).all()
+    WHERE 1=1
+  `
+  const usersParams: unknown[] = []
+  if (province) { usersQuery += ' AND u.province = ?'; usersParams.push(province) }
+  usersQuery += ` ORDER BY
+    CASE u.account_status
+      WHEN 'pending'  THEN 0
+      WHEN 'active'   THEN 1
+      WHEN 'resigned' THEN 2
+      ELSE 3
+    END,
+    u.created_at DESC`
+  const users = await c.env.DB.prepare(usersQuery).bind(...usersParams).all()
   return c.json(ok(users.results))
 })
 
@@ -83,7 +88,7 @@ admin.put('/users/:id', async (c) => {
   if (isNaN(id)) return c.json(err('ID không hợp lệ'), 400)
 
   const body = await c.req.json()
-  const { full_name, role, is_active, account_status } = body
+  const { full_name, role, is_active, account_status, province } = body
 
   // Validate account_status nếu có
   const validStatuses = ['pending', 'active', 'resigned']
@@ -106,6 +111,7 @@ admin.put('/users/:id', async (c) => {
       role           = COALESCE(?, role),
       is_active      = COALESCE(?, is_active),
       account_status = COALESCE(?, account_status),
+      province       = COALESCE(?, province),
       updated_at     = CURRENT_TIMESTAMP
     WHERE id = ?
   `).bind(
@@ -113,6 +119,7 @@ admin.put('/users/:id', async (c) => {
     role           ?? null,
     is_active      ?? null,
     account_status ?? null,
+    province       ?? null,
     id
   ).run()
 
@@ -208,15 +215,19 @@ admin.get('/checkins', async (c) => {
   const dateFrom  = c.req.query('date_from')
   const dateTo    = c.req.query('date_to')
   const userId    = c.req.query('user_id')
+  const province  = c.req.query('province')
   const page      = Math.max(1, parseInt(c.req.query('page')  ?? '1'))
-  const limit     = Math.min(100, Math.max(1, parseInt(c.req.query('limit') ?? '50')))
+  const limit     = Math.min(200, Math.max(1, parseInt(c.req.query('limit') ?? '50')))
   const offset    = (page - 1) * limit
 
   let query = `
     SELECT c.id, c.date, c.checkin_time, c.checkout_time,
            c.checkin_address, c.checkout_address,
+           c.checkin_image1, c.checkin_image2,
+           c.checkout_image1, c.checkout_image2,
+           c.activity_image1, c.activity_image2, c.activity_image3, c.activity_image4,
            c.sales_quantity, c.notes, c.status,
-           u.id AS user_id, u.full_name, u.username
+           u.id AS user_id, u.full_name, u.username, u.province
     FROM checkins c
     JOIN users u ON u.id = c.user_id
     WHERE 1=1
@@ -229,7 +240,8 @@ admin.get('/checkins', async (c) => {
     if (dateFrom) { query += ' AND c.date >= ?'; params.push(dateFrom) }
     if (dateTo)   { query += ' AND c.date <= ?'; params.push(dateTo) }
   }
-  if (userId) { query += ' AND c.user_id = ?'; params.push(userId) }
+  if (userId)   { query += ' AND c.user_id = ?';  params.push(userId) }
+  if (province) { query += ' AND u.province = ?'; params.push(province) }
 
   query += ' ORDER BY c.date DESC, c.checkin_time DESC LIMIT ? OFFSET ?'
   params.push(limit, offset)
@@ -252,12 +264,11 @@ admin.get('/checkins/:id', async (c) => {
 })
 
 // ── GET /api/admin/reports/summary ───────────────────────────────────────
-// Tổng kết theo ngày (hoặc khoảng ngày)
-// Query params: date, date_from, date_to
 admin.get('/reports/summary', async (c) => {
   const date     = c.req.query('date')
   const dateFrom = c.req.query('date_from')
   const dateTo   = c.req.query('date_to')
+  const province = c.req.query('province')
 
   let where = '1=1'
   const params: unknown[] = []
@@ -268,19 +279,34 @@ admin.get('/reports/summary', async (c) => {
     if (dateFrom) { where += ' AND c.date >= ?'; params.push(dateFrom) }
     if (dateTo)   { where += ' AND c.date <= ?'; params.push(dateTo) }
   }
+  if (province) { where += ' AND u.province = ?'; params.push(province) }
 
   const summary = await c.env.DB.prepare(`
     SELECT
-      COUNT(*)                                    AS total_records,
-      COUNT(CASE WHEN status = 'checkin'  THEN 1 END) AS total_checkin_only,
-      COUNT(CASE WHEN status = 'checkout' THEN 1 END) AS total_checkout,
-      SUM(COALESCE(sales_quantity, 0))            AS total_sales,
-      COUNT(DISTINCT user_id)                     AS total_staff
+      COUNT(*)                                         AS total_records,
+      COUNT(CASE WHEN c.status = 'checkin'  THEN 1 END) AS total_checkin_only,
+      COUNT(CASE WHEN c.status = 'checkout' THEN 1 END) AS total_checkout,
+      SUM(COALESCE(c.sales_quantity, 0))               AS total_sales,
+      COUNT(DISTINCT c.user_id)                        AS total_staff
     FROM checkins c
+    JOIN users u ON u.id = c.user_id
     WHERE ${where}
   `).bind(...params).first()
 
   return c.json(ok(summary))
+})
+
+// ── GET /api/admin/reports/provinces ─────────────────────────────────────
+// Danh sách các tỉnh/thành có nhân viên
+admin.get('/reports/provinces', async (c) => {
+  const rows = await c.env.DB.prepare(`
+    SELECT DISTINCT province
+    FROM users
+    WHERE province IS NOT NULL AND province != '' AND account_status != 'resigned'
+    ORDER BY province
+  `).all()
+  const list = rows.results.map((r: any) => r.province)
+  return c.json(ok(list))
 })
 
 export default admin

@@ -47,7 +47,12 @@ window.API = (() => {
     getCheckinDetail: (id) => request('GET', `/checkin/${id}`),
 
     // Admin - Nhân viên
-    getUsers: () => request('GET', '/admin/users'),
+    // getUsers(params) hoặc getUsers() — params = { province: '...' }
+    getUsers: (params = {}) => {
+      const q = new URLSearchParams(params)
+      const qs = q.toString()
+      return request('GET', qs ? `/admin/users?${qs}` : '/admin/users')
+    },
     createUser: (data) => request('POST', '/admin/users', data),
     updateUser: (id, data) => request('PUT', `/admin/users/${id}`, data),
     updateUserStatus: (id, account_status) => request('PATCH', `/admin/users/${id}/status`, { account_status }),
@@ -56,8 +61,10 @@ window.API = (() => {
     resetPassword: (user_id, new_password) => request('POST', '/admin/reset-password', { user_id, new_password }),
 
     // Admin - Check-in / Báo cáo
-    getAdminCheckins: (params = {}) => {
-      const q = new URLSearchParams({ limit: '100', ...params })
+    // getAdminCheckins(date, extraParams) hoặc getAdminCheckins(date)
+    getAdminCheckins: (date, extraParams = {}) => {
+      const q = new URLSearchParams({ limit: '200', ...extraParams })
+      if (date) q.set('date', date)
       return request('GET', `/admin/checkins?${q}`)
     },
     getAdminCheckinDetail: (id) => request('GET', `/admin/checkins/${id}`),
@@ -65,5 +72,6 @@ window.API = (() => {
       const q = new URLSearchParams(params)
       return request('GET', `/admin/reports/summary?${q}`)
     },
+    getProvinces: () => request('GET', '/admin/reports/provinces'),
   }
 })()

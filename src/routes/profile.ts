@@ -22,7 +22,7 @@ profile.use('*', authMiddleware)
 profile.get('/', async (c) => {
   const user = c.get('user')
   const data = await c.env.DB.prepare(`
-    SELECT u.id, u.username, u.full_name, u.role,
+    SELECT u.id, u.username, u.full_name, u.role, u.province,
            p.cccd_number, p.cccd_full_name, p.cccd_dob, p.cccd_gender,
            p.cccd_address, p.cccd_issue_date, p.cccd_expiry_date,
            p.cccd_front_image, p.cccd_back_image,
@@ -44,8 +44,16 @@ profile.put('/', async (c) => {
   const {
     cccd_number, cccd_full_name, cccd_dob, cccd_gender,
     cccd_address, cccd_issue_date, cccd_expiry_date,
-    bank_account_number, bank_name, bank_account_name, phone
+    bank_account_number, bank_name, bank_account_name, phone,
+    province
   } = body
+
+  // Cập nhật province trong bảng users
+  if (province !== undefined) {
+    await c.env.DB.prepare(
+      'UPDATE users SET province = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+    ).bind(province?.trim() || null, user.id).run()
+  }
 
   // Upsert profile
   const existing = await c.env.DB.prepare('SELECT id FROM profiles WHERE user_id = ?')
@@ -60,10 +68,10 @@ profile.put('/', async (c) => {
         phone = ?, updated_at = CURRENT_TIMESTAMP
       WHERE user_id = ?
     `).bind(
-      cccd_number, cccd_full_name, cccd_dob, cccd_gender,
-      cccd_address, cccd_issue_date, cccd_expiry_date,
-      bank_account_number, bank_name, bank_account_name,
-      phone, user.id
+      cccd_number ?? null, cccd_full_name ?? null, cccd_dob ?? null, cccd_gender ?? null,
+      cccd_address ?? null, cccd_issue_date ?? null, cccd_expiry_date ?? null,
+      bank_account_number ?? null, bank_name ?? null, bank_account_name ?? null,
+      phone ?? null, user.id
     ).run()
   } else {
     await c.env.DB.prepare(`
@@ -73,9 +81,9 @@ profile.put('/', async (c) => {
         bank_account_number, bank_name, bank_account_name, phone
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
-      user.id, cccd_number, cccd_full_name, cccd_dob, cccd_gender,
-      cccd_address, cccd_issue_date, cccd_expiry_date,
-      bank_account_number, bank_name, bank_account_name, phone
+      user.id, cccd_number ?? null, cccd_full_name ?? null, cccd_dob ?? null, cccd_gender ?? null,
+      cccd_address ?? null, cccd_issue_date ?? null, cccd_expiry_date ?? null,
+      bank_account_number ?? null, bank_name ?? null, bank_account_name ?? null, phone ?? null
     ).run()
   }
 

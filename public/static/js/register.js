@@ -77,6 +77,8 @@ window.RegisterModule = (() => {
     if (phone && !/^[0-9+\-\s]{8,15}$/.test(phone)) {
       showError('reg-err-1', 'Số điện thoại không hợp lệ'); return false
     }
+    const province = document.getElementById('reg-province')?.value
+    if (!province) { showError('reg-err-1', 'Vui lòng chọn tỉnh/thành phố làm việc'); return false }
     showError('reg-err-1', '')
     return true
   }
@@ -219,6 +221,19 @@ window.RegisterModule = (() => {
                 <i class="fas fa-phone absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
                 <input id="reg-phone" type="tel" placeholder="0901234567"
                   class="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+              </div>
+            </div>
+            <!-- Tỉnh/Thành phố làm việc -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Tỉnh/Thành phố làm việc <span class="text-red-500">*</span>
+              </label>
+              <div class="relative">
+                <i class="fas fa-map-marker-alt absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                <select id="reg-province"
+                  class="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white appearance-none">
+                  ${window.PROVINCES_OPTIONS ? window.PROVINCES_OPTIONS() : '<option value="">-- Chọn tỉnh/thành phố --</option>'}
+                </select>
               </div>
             </div>
             <!-- Password -->
@@ -398,6 +413,7 @@ window.RegisterModule = (() => {
         password:         val('reg-password'),
         confirm_password: val('reg-confirm'),
         phone:            val('reg-phone') || null,
+        province:         document.getElementById('reg-province')?.value || null,
         // Bước 2
         cccd_number:      val('reg-cccd-number') || null,
         cccd_full_name:   val('reg-cccd-fullname') || null,

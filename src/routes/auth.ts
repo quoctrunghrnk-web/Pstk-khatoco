@@ -28,7 +28,7 @@ auth.post('/register', async (c) => {
     // Tài khoản
     username, password, confirm_password, full_name,
     // Liên hệ
-    phone,
+    phone, province,
     // CCCD
     cccd_number, cccd_full_name, cccd_dob, cccd_gender,
     cccd_address, cccd_issue_date, cccd_expiry_date,
@@ -71,9 +71,9 @@ auth.post('/register', async (c) => {
   // ── Tạo user với status = 'pending' ──
   const hash = await hashPassword(password)
   const result = await c.env.DB.prepare(`
-    INSERT INTO users (username, password_hash, full_name, role, is_active, account_status)
-    VALUES (?, ?, ?, 'staff', 1, 'pending')
-  `).bind(username.trim().toLowerCase(), hash, full_name.trim()).run()
+    INSERT INTO users (username, password_hash, full_name, role, is_active, account_status, province)
+    VALUES (?, ?, ?, 'staff', 1, 'pending', ?)
+  `).bind(username.trim().toLowerCase(), hash, full_name.trim(), province?.trim() || null).run()
 
   const newUserId = result.meta.last_row_id
 
