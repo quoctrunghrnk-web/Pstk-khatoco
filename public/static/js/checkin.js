@@ -3,21 +3,26 @@
 // =============================================
 window.CheckinModule = (() => {
 
-  let _todayRecord = null
-  let _currentGeo = null
-  let _activityGrid = null   // giữ tham chiếu photo grid hoạt động
+  let _todayRecord  = null
+  let _currentGeo   = null   // GPS được lấy 1 lần, dùng chung cho cả session
+  let _activityGrid = null   // tham chiếu photo grid hoạt động
 
+  // ── Helpers ─────────────────────────────────
   function formatTime(isoStr) {
     if (!isoStr) return '--:--'
     try {
       const d = new Date(isoStr)
-      return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })
+      return d.toLocaleTimeString('vi-VN', {
+        hour: '2-digit', minute: '2-digit',
+        timeZone: 'Asia/Ho_Chi_Minh'
+      })
     } catch { return '--:--' }
   }
 
   function getStatusBadge(status) {
     if (!status) return '<span class="text-gray-400 text-sm">Chưa check-in</span>'
-    if (status === 'checkin') return '<span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full text-xs font-medium">Đang làm việc</span>'
+    if (status === 'checkin')
+      return '<span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full text-xs font-medium">Đang làm việc</span>'
     return '<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">Đã check-out</span>'
   }
 
@@ -48,12 +53,16 @@ window.CheckinModule = (() => {
           <!-- Giờ check-in / check-out -->
           <div class="grid grid-cols-2 gap-3 mb-3">
             <div class="bg-blue-50 rounded-xl p-3 text-center">
-              <p class="text-xs text-blue-500 mb-1"><i class="fas fa-sign-in-alt mr-1"></i>Check-in</p>
+              <p class="text-xs text-blue-500 mb-1">
+                <i class="fas fa-sign-in-alt mr-1"></i>Check-in
+              </p>
               <p id="ci-time-in" class="text-2xl font-bold text-blue-700">--:--</p>
               <p id="ci-addr-in" class="text-xs text-blue-400 mt-1 line-clamp-2">--</p>
             </div>
             <div class="bg-purple-50 rounded-xl p-3 text-center">
-              <p class="text-xs text-purple-500 mb-1"><i class="fas fa-sign-out-alt mr-1"></i>Check-out</p>
+              <p class="text-xs text-purple-500 mb-1">
+                <i class="fas fa-sign-out-alt mr-1"></i>Check-out
+              </p>
               <p id="ci-time-out" class="text-2xl font-bold text-purple-700">--:--</p>
               <p id="ci-addr-out" class="text-xs text-purple-400 mt-1 line-clamp-2">--</p>
             </div>
@@ -67,29 +76,32 @@ window.CheckinModule = (() => {
           </div>
         </div>
 
-        <!-- ── Card: Số lượng bán & ghi chú (luôn hiện khi đã check-in) ── -->
+        <!-- ── Card: Số lượng bán & ghi chú ── -->
         <div id="ci-sales-card" class="hidden bg-white rounded-2xl shadow p-4">
           <h3 class="font-semibold text-gray-800 mb-3">
             <i class="fas fa-clipboard-list mr-2 text-green-500"></i>Kết quả bán hàng
           </h3>
-          <div class="space-y-3">
+          <div id="ci-sales-inputs" class="space-y-3">
             <div>
               <label class="block text-sm font-medium text-gray-600 mb-1">
                 <i class="fas fa-box mr-1 text-gray-400"></i>Số lượng bán được
               </label>
               <input type="number" id="ci-sales-qty-input" min="0" value="0"
-                class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-500 bg-gray-50" />
+                class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm outline-none
+                       focus:ring-2 focus:ring-green-500 bg-gray-50" />
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-600 mb-1">
                 <i class="fas fa-sticky-note mr-1 text-gray-400"></i>Ghi chú
               </label>
-              <textarea id="ci-notes-input" rows="2" placeholder="Nhập ghi chú (không bắt buộc)..."
-                class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 resize-none"></textarea>
+              <textarea id="ci-notes-input" rows="2"
+                placeholder="Nhập ghi chú (không bắt buộc)..."
+                class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm outline-none
+                       focus:ring-2 focus:ring-green-500 bg-gray-50 resize-none"></textarea>
             </div>
           </div>
-          <!-- Hiện sau checkout dạng readonly -->
-          <div id="ci-sales-readonly" class="hidden space-y-2 mt-2">
+          <!-- Readonly sau checkout -->
+          <div id="ci-sales-readonly" class="hidden space-y-2">
             <div class="flex items-center gap-2 bg-green-50 rounded-xl px-3 py-2">
               <i class="fas fa-box text-green-500"></i>
               <span class="text-sm text-gray-600">Số lượng bán:</span>
@@ -110,11 +122,11 @@ window.CheckinModule = (() => {
             </h3>
             <span class="text-xs text-gray-400">Tối đa 4 ảnh</span>
           </div>
-
-          <!-- Grid 4 slot ảnh - luôn hiện, có nút bấm -->
+          <!-- Grid 4 slot ảnh -->
           <div id="activity-photo-grid" class="grid grid-cols-2 gap-2 mb-3"></div>
-
-          <button id="btn-save-activity" class="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-medium hidden">
+          <button id="btn-save-activity"
+            class="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl
+                   text-sm font-medium hidden">
             <i class="fas fa-save mr-1"></i>Lưu ảnh hoạt động
           </button>
         </div>
@@ -125,7 +137,9 @@ window.CheckinModule = (() => {
             <i class="fas fa-history mr-2 text-gray-400"></i>Lịch sử gần đây
           </h3>
           <div id="ci-history-list" class="space-y-2">
-            <p class="text-center text-gray-300 text-sm py-4"><i class="fas fa-spinner fa-spin"></i></p>
+            <p class="text-center text-gray-300 text-sm py-4">
+              <i class="fas fa-spinner fa-spin"></i>
+            </p>
           </div>
         </div>
 
@@ -134,31 +148,38 @@ window.CheckinModule = (() => {
     `
   }
 
-  // ── Lấy GPS ─────────────────────────────────
-  async function fetchGeo(color = 'blue') {
+  // ── Lấy GPS một lần, lưu vào _currentGeo ────
+  async function fetchGeo(themeColor = 'blue') {
     const { close } = Modal.create(`
       <div class="p-6 text-center">
-        <i class="fas fa-map-marker-alt text-4xl text-${color}-500 mb-3 animate-bounce"></i>
+        <i class="fas fa-map-marker-alt text-4xl text-${themeColor}-500 mb-3 animate-bounce"></i>
         <h3 class="font-bold text-gray-800 mb-1">Đang lấy vị trí GPS...</h3>
         <p class="text-gray-400 text-sm">Vui lòng chờ</p>
       </div>
     `, { persistent: true })
+
     try {
       _currentGeo = await Geo.getPositionWithAddress()
     } catch (e) {
       Toast.warning('Không lấy được GPS: ' + e.message)
-      _currentGeo = { lat: null, lng: null, address: 'Không xác định' }
+      _currentGeo = { lat: null, lng: null, address: 'Khong xac dinh vi tri' }
     } finally {
       close()
     }
     return _currentGeo
   }
 
+  // ── Helper: tạo photo grid truyền GPS sẵn ───
+  // getGeo trả về _currentGeo ngay (sync) → không cần gọi GPS lại
+  function makeGetGeo() {
+    return () => _currentGeo
+  }
+
   // ── Check-in flow ────────────────────────────
   async function doCheckin() {
     await fetchGeo('blue')
 
-    const { overlay, close: closeModal } = Modal.create(`
+    const { close: closeModal } = Modal.create(`
       <div class="p-5">
         <h3 class="text-lg font-bold text-gray-800 mb-1">
           <i class="fas fa-camera mr-2 text-blue-600"></i>Ảnh Check-in
@@ -171,7 +192,9 @@ window.CheckinModule = (() => {
         </p>
         <p id="ci-modal-error" class="text-red-500 text-sm text-center mb-2 hidden"></p>
         <div class="flex gap-3">
-          <button id="ci-modal-cancel" class="flex-1 py-2.5 border border-gray-200 rounded-xl text-gray-600 text-sm">Hủy</button>
+          <button id="ci-modal-cancel" class="flex-1 py-2.5 border border-gray-200 rounded-xl text-gray-600 text-sm">
+            Hủy
+          </button>
           <button id="ci-modal-submit" class="flex-1 py-2.5 bg-blue-600 text-white rounded-xl font-medium text-sm">
             <i class="fas fa-sign-in-alt mr-1"></i>Xác nhận
           </button>
@@ -179,17 +202,24 @@ window.CheckinModule = (() => {
       </div>
     `, { persistent: true })
 
+    // Truyền GPS đã có vào grid → không lấy GPS lại mỗi khi chụp
     const grid = Camera.createPhotoGrid(
-      document.getElementById('checkin-photo-grid'), 2,
-      { geo: _currentGeo, address: _currentGeo?.address }, () => {}
+      document.getElementById('checkin-photo-grid'),
+      2,
+      { allowGallery: true },
+      () => {},
+      null,
+      makeGetGeo()
     )
 
     document.getElementById('ci-modal-cancel').onclick = closeModal
+
     document.getElementById('ci-modal-submit').onclick = async () => {
       const all = grid.getAll()
       if (!all[0] || !all[1]) {
         const errEl = document.getElementById('ci-modal-error')
-        errEl.textContent = 'Vui lòng chụp đủ 2 ảnh'; errEl.classList.remove('hidden')
+        errEl.textContent = 'Vui lòng chụp đủ 2 ảnh'
+        errEl.classList.remove('hidden')
         return
       }
       const btn = document.getElementById('ci-modal-submit')
@@ -199,7 +229,7 @@ window.CheckinModule = (() => {
         await API.checkinStart({
           lat: _currentGeo?.lat, lng: _currentGeo?.lng,
           address: _currentGeo?.address,
-          image1: all[0], image2: all[1]
+          image1: all[0], image2: all[1],
         })
         Toast.success('Check-in thành công!')
         closeModal()
@@ -216,11 +246,11 @@ window.CheckinModule = (() => {
   async function doCheckout() {
     await fetchGeo('purple')
 
-    // Lấy giá trị sales + notes từ card ngoài trang
-    const salesQty = parseInt(document.getElementById('ci-sales-qty-input')?.value) || 0
-    const notes = document.getElementById('ci-notes-input')?.value.trim() || null
+    // Đọc giá trị sales + notes từ card ngoài trang
+    const salesQty = Math.max(0, parseInt(document.getElementById('ci-sales-qty-input')?.value) || 0)
+    const notes    = document.getElementById('ci-notes-input')?.value.trim() || null
 
-    const { overlay, close: closeModal } = Modal.create(`
+    const { close: closeModal } = Modal.create(`
       <div class="p-5">
         <h3 class="text-lg font-bold text-gray-800 mb-1">
           <i class="fas fa-camera mr-2 text-purple-600"></i>Ảnh Check-out
@@ -230,10 +260,15 @@ window.CheckinModule = (() => {
 
         <!-- Tóm tắt kết quả -->
         <div class="bg-gray-50 rounded-xl p-3 mb-4 space-y-1">
-          <p class="text-xs text-gray-500">
-            <i class="fas fa-box mr-1 text-green-500"></i>Số lượng bán: <b class="text-gray-700">${salesQty}</b>
+          <p class="text-xs text-gray-600">
+            <i class="fas fa-box mr-1 text-green-500"></i>
+            Số lượng bán: <b class="text-gray-800">${salesQty}</b>
           </p>
-          ${notes ? `<p class="text-xs text-gray-500"><i class="fas fa-sticky-note mr-1 text-gray-400"></i>${notes}</p>` : ''}
+          ${notes
+            ? `<p class="text-xs text-gray-600">
+                 <i class="fas fa-sticky-note mr-1 text-gray-400"></i>${notes}
+               </p>`
+            : ''}
         </div>
 
         <p class="text-xs text-gray-400 mb-4 flex items-start gap-1">
@@ -242,7 +277,9 @@ window.CheckinModule = (() => {
         </p>
         <p id="co-modal-error" class="text-red-500 text-sm text-center mb-2 hidden"></p>
         <div class="flex gap-3">
-          <button id="co-modal-cancel" class="flex-1 py-2.5 border border-gray-200 rounded-xl text-gray-600 text-sm">Hủy</button>
+          <button id="co-modal-cancel" class="flex-1 py-2.5 border border-gray-200 rounded-xl text-gray-600 text-sm">
+            Hủy
+          </button>
           <button id="co-modal-submit" class="flex-1 py-2.5 bg-purple-600 text-white rounded-xl font-medium text-sm">
             <i class="fas fa-sign-out-alt mr-1"></i>Xác nhận
           </button>
@@ -251,16 +288,22 @@ window.CheckinModule = (() => {
     `, { persistent: true })
 
     const grid = Camera.createPhotoGrid(
-      document.getElementById('checkout-photo-grid'), 2,
-      { geo: _currentGeo, address: _currentGeo?.address }, () => {}
+      document.getElementById('checkout-photo-grid'),
+      2,
+      { allowGallery: true },
+      () => {},
+      null,
+      makeGetGeo()
     )
 
     document.getElementById('co-modal-cancel').onclick = closeModal
+
     document.getElementById('co-modal-submit').onclick = async () => {
       const all = grid.getAll()
       if (!all[0] || !all[1]) {
         const errEl = document.getElementById('co-modal-error')
-        errEl.textContent = 'Vui lòng chụp đủ 2 ảnh'; errEl.classList.remove('hidden')
+        errEl.textContent = 'Vui lòng chụp đủ 2 ảnh'
+        errEl.classList.remove('hidden')
         return
       }
       const btn = document.getElementById('co-modal-submit')
@@ -288,20 +331,27 @@ window.CheckinModule = (() => {
   // ── Khởi tạo photo grid hoạt động ───────────
   function initActivityGrid(existingImages) {
     const container = document.getElementById('activity-photo-grid')
-    const saveBtn = document.getElementById('btn-save-activity')
+    const saveBtn   = document.getElementById('btn-save-activity')
     if (!container) return
 
-    // Nếu đã có ảnh từ DB → hiện ảnh + cho phép thêm vào slot trống
-    const photos = existingImages || [null, null, null, null]
+    const photos = [
+      existingImages?.[0] ?? null,
+      existingImages?.[1] ?? null,
+      existingImages?.[2] ?? null,
+      existingImages?.[3] ?? null,
+    ]
 
+    // Truyền GPS đã có (hoặc null nếu chưa lấy) vào grid
+    // Camera sẽ dùng GPS này để watermark; nếu null → tự lấy GPS khi chụp
     _activityGrid = Camera.createPhotoGrid(
-      container, 4,
+      container,
+      4,
       { allowGallery: true },
-      (changedPhotos) => {
-        // Hiện nút Lưu khi có ảnh mới được thêm/xóa
+      (_changedPhotos) => {
         if (saveBtn) saveBtn.classList.remove('hidden')
       },
-      photos  // truyền ảnh ban đầu vào
+      photos,
+      makeGetGeo()   // truyền GPS đã có → không gọi GPS lại mỗi lần chụp
     )
   }
 
@@ -316,25 +366,31 @@ window.CheckinModule = (() => {
     }
   }
 
+  // ── updateTodayUI ────────────────────────────
   function updateTodayUI(record) {
-    // Badge
+    // Badge trạng thái
     const badgeEl = document.getElementById('ci-status-badge')
     if (badgeEl) badgeEl.innerHTML = getStatusBadge(record?.status)
 
-    // Times
-    const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val }
+    // Giờ + địa chỉ
+    const setEl = (id, val) => {
+      const el = document.getElementById(id)
+      if (el) el.textContent = val
+    }
     setEl('ci-time-in',  record ? formatTime(record.checkin_time) : '--:--')
     setEl('ci-time-out', record?.checkout_time ? formatTime(record.checkout_time) : '--:--')
-    setEl('ci-addr-in',  record?.checkin_address || '--')
+    setEl('ci-addr-in',  record?.checkin_address  || '--')
     setEl('ci-addr-out', record?.checkout_address || '--')
 
-    // ── Nút hành động ──
+    // ── Nút hành động ──────────────────────────
     const actionsEl = document.getElementById('ci-actions')
     if (actionsEl) {
       if (!record) {
         actionsEl.innerHTML = `
           <button id="btn-do-checkin"
-            class="w-full py-4 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-transform shadow-lg shadow-blue-200">
+            class="w-full py-4 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white
+                   rounded-2xl font-bold text-lg flex items-center justify-center gap-3
+                   transition-transform shadow-lg shadow-blue-200">
             <i class="fas fa-map-marker-alt text-xl"></i><span>CHECK IN</span>
           </button>`
         document.getElementById('btn-do-checkin').onclick = doCheckin
@@ -342,7 +398,9 @@ window.CheckinModule = (() => {
       } else if (record.status === 'checkin') {
         actionsEl.innerHTML = `
           <button id="btn-do-checkout"
-            class="w-full py-4 bg-purple-600 hover:bg-purple-700 active:scale-95 text-white rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-transform shadow-lg shadow-purple-200">
+            class="w-full py-4 bg-purple-600 hover:bg-purple-700 active:scale-95 text-white
+                   rounded-2xl font-bold text-lg flex items-center justify-center gap-3
+                   transition-transform shadow-lg shadow-purple-200">
             <i class="fas fa-sign-out-alt text-xl"></i><span>CHECK OUT</span>
           </button>`
         document.getElementById('btn-do-checkout').onclick = doCheckout
@@ -355,89 +413,75 @@ window.CheckinModule = (() => {
       }
     }
 
-    // ── Card số lượng + ghi chú ──
-    const salesCard = document.getElementById('ci-sales-card')
-    const salesInput = document.getElementById('ci-sales-qty-input')
-    const notesInput = document.getElementById('ci-notes-input')
+    // ── Card số lượng + ghi chú ─────────────────
+    const salesCard     = document.getElementById('ci-sales-card')
+    const salesInputs   = document.getElementById('ci-sales-inputs')
     const salesReadonly = document.getElementById('ci-sales-readonly')
+    const salesInput    = document.getElementById('ci-sales-qty-input')
+    const notesInput    = document.getElementById('ci-notes-input')
 
     if (salesCard) {
       if (!record) {
-        // Chưa check-in: ẩn hẳn
         salesCard.classList.add('hidden')
       } else if (record.status === 'checkin') {
-        // Đang làm: hiện dạng input
         salesCard.classList.remove('hidden')
+        if (salesInputs)   salesInputs.classList.remove('hidden')
         if (salesReadonly) salesReadonly.classList.add('hidden')
         if (salesInput) {
           salesInput.disabled = false
-          salesInput.classList.remove('bg-gray-100')
           salesInput.value = record.sales_quantity || 0
         }
         if (notesInput) {
           notesInput.disabled = false
-          notesInput.classList.remove('bg-gray-100')
           notesInput.value = record.notes || ''
         }
       } else {
-        // Đã checkout: hiện dạng readonly đẹp
+        // Đã checkout → readonly
         salesCard.classList.remove('hidden')
-        if (salesInput) salesInput.closest('div').classList.add('hidden')
-        if (notesInput) notesInput.closest('div').classList.add('hidden')
-        if (salesReadonly) {
-          salesReadonly.classList.remove('hidden')
-          const qtyDisplay = document.getElementById('ci-sales-qty-display')
-          const notesDisplay = document.getElementById('ci-notes-display')
-          const notesRow = document.getElementById('ci-notes-readonly-row')
-          if (qtyDisplay) qtyDisplay.textContent = record.sales_quantity || 0
-          if (record.notes && notesDisplay && notesRow) {
-            notesDisplay.textContent = record.notes
-            notesRow.classList.remove('hidden')
-          }
+        if (salesInputs)   salesInputs.classList.add('hidden')
+        if (salesReadonly) salesReadonly.classList.remove('hidden')
+
+        const qtyDisplay  = document.getElementById('ci-sales-qty-display')
+        const notesDisplay = document.getElementById('ci-notes-display')
+        const notesRow    = document.getElementById('ci-notes-readonly-row')
+        if (qtyDisplay)   qtyDisplay.textContent = record.sales_quantity || 0
+        if (record.notes && notesDisplay && notesRow) {
+          notesDisplay.textContent = record.notes
+          notesRow.classList.remove('hidden')
         }
       }
     }
 
-    // ── Section ảnh hoạt động ──
+    // ── Section ảnh hoạt động ──────────────────
     const activitySection = document.getElementById('ci-activity-section')
     if (activitySection) {
-      if (record) {
+      if (!record) {
+        activitySection.classList.add('hidden')
+      } else {
         activitySection.classList.remove('hidden')
-        // Lấy ảnh hiện có từ record
         const existingImages = [
           record.activity_image1 || null,
           record.activity_image2 || null,
           record.activity_image3 || null,
-          record.activity_image4 || null
+          record.activity_image4 || null,
         ]
-        // Khởi tạo lại grid với ảnh hiện có
-        // Nếu đã checkout: grid chỉ read-only (không cho thêm ảnh)
         if (record.status === 'checkout') {
-          renderActivityReadonly(existingImages)
+          // Readonly: chỉ xem
+          Camera.createPhotoGrid(
+            document.getElementById('activity-photo-grid'),
+            4,
+            { readonly: true },
+            null,
+            existingImages
+          )
+          const saveBtn = document.getElementById('btn-save-activity')
+          if (saveBtn) saveBtn.classList.add('hidden')
         } else {
+          // Đang check-in: có thể thêm / xóa ảnh
           initActivityGrid(existingImages)
         }
-      } else {
-        activitySection.classList.add('hidden')
       }
     }
-  }
-
-  // Hiển thị ảnh hoạt động dạng xem (sau checkout)
-  function renderActivityReadonly(images) {
-    const container = document.getElementById('activity-photo-grid')
-    const saveBtn = document.getElementById('btn-save-activity')
-    if (!container) return
-    if (saveBtn) saveBtn.classList.add('hidden')
-
-    container.innerHTML = images.map((img, i) => img
-      ? `<div class="aspect-square rounded-xl overflow-hidden cursor-pointer" onclick="Modal.image('${img}')">
-           <img src="${img}" class="w-full h-full object-cover" />
-         </div>`
-      : `<div class="aspect-square rounded-xl bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center text-gray-300">
-           <div class="text-center"><i class="fas fa-image text-xl mb-1"></i><p class="text-xs">Ảnh ${i+1}</p></div>
-         </div>`
-    ).join('')
   }
 
   // ── Lịch sử ─────────────────────────────────
@@ -447,11 +491,15 @@ window.CheckinModule = (() => {
     try {
       const res = await API.getHistory(1, 7)
       if (!res.data || res.data.length === 0) {
-        listEl.innerHTML = '<p class="text-center text-gray-300 text-sm py-6"><i class="fas fa-inbox text-2xl mb-2 block"></i>Chưa có lịch sử</p>'
+        listEl.innerHTML = `
+          <p class="text-center text-gray-300 text-sm py-6">
+            <i class="fas fa-inbox text-2xl mb-2 block"></i>Chưa có lịch sử
+          </p>`
         return
       }
       listEl.innerHTML = res.data.map(r => `
-        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl cursor-pointer active:bg-gray-100 transition-colors"
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl cursor-pointer
+                    active:bg-gray-100 transition-colors"
              onclick="CheckinModule.showHistoryDetail(${r.id})">
           <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0
             ${r.status === 'checkout' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'}">
@@ -471,11 +519,12 @@ window.CheckinModule = (() => {
           </div>
         </div>
       `).join('')
-    } catch (e) {
-      if (listEl) listEl.innerHTML = '<p class="text-center text-gray-300 text-sm py-4">Không tải được lịch sử</p>'
+    } catch {
+      listEl.innerHTML = '<p class="text-center text-gray-300 text-sm py-4">Không tải được lịch sử</p>'
     }
   }
 
+  // ── Chi tiết một ngày ────────────────────────
   async function showHistoryDetail(id) {
     try {
       const res = await API.getCheckinDetail(id)
@@ -488,7 +537,8 @@ window.CheckinModule = (() => {
              <img src="${src}" class="w-full rounded-xl cursor-pointer aspect-square object-cover"
                   onclick="Modal.image('${src}')" />
            </div>`
-        : `<div class="aspect-square bg-gray-50 rounded-xl border border-dashed border-gray-200 flex items-center justify-center">
+        : `<div class="aspect-square bg-gray-50 rounded-xl border border-dashed border-gray-200
+                       flex items-center justify-center">
              <p class="text-xs text-gray-300">${label}</p>
            </div>`
 
@@ -514,8 +564,10 @@ window.CheckinModule = (() => {
 
           ${(r.sales_quantity || r.notes) ? `
           <div class="bg-green-50 rounded-xl p-3 mb-3 space-y-1">
-            <p class="text-sm"><i class="fas fa-box mr-1 text-green-500"></i>
-              <span class="text-gray-600">Số lượng bán: </span><b class="text-green-700">${r.sales_quantity || 0}</b>
+            <p class="text-sm">
+              <i class="fas fa-box mr-1 text-green-500"></i>
+              <span class="text-gray-600">Số lượng bán: </span>
+              <b class="text-green-700">${r.sales_quantity || 0}</b>
             </p>
             ${r.notes ? `<p class="text-sm text-gray-600"><i class="fas fa-sticky-note mr-1 text-gray-400"></i>${r.notes}</p>` : ''}
           </div>` : ''}
@@ -548,7 +600,7 @@ window.CheckinModule = (() => {
           </div>
         </div>
       `)
-    } catch (e) {
+    } catch {
       Toast.error('Không tải được chi tiết')
     }
   }
@@ -559,9 +611,9 @@ window.CheckinModule = (() => {
       const el = document.getElementById('ci-live-time')
       if (!el) return
       const now = new Date(Date.now() + 7 * 60 * 60 * 1000)
-      const h = String(now.getUTCHours()).padStart(2,'0')
-      const m = String(now.getUTCMinutes()).padStart(2,'0')
-      const s = String(now.getUTCSeconds()).padStart(2,'0')
+      const h = String(now.getUTCHours()).padStart(2, '0')
+      const m = String(now.getUTCMinutes()).padStart(2, '0')
+      const s = String(now.getUTCSeconds()).padStart(2, '0')
       el.textContent = `${h}:${m}:${s}`
     }
     tick()
@@ -570,7 +622,7 @@ window.CheckinModule = (() => {
 
   // ── bindEvents ───────────────────────────────
   async function bindEvents() {
-    // Ngày
+    // Hiện ngày hôm nay
     const dateEl = document.getElementById('ci-date-display')
     if (dateEl) {
       const now = new Date(Date.now() + 7 * 60 * 60 * 1000)
@@ -587,10 +639,9 @@ window.CheckinModule = (() => {
     const saveBtn = document.getElementById('btn-save-activity')
     if (saveBtn) {
       saveBtn.onclick = async () => {
-        if (!_activityGrid) { Toast.warning('Chưa có ảnh nào'); return }
+        if (!_activityGrid) { Toast.warning('Chưa khởi tạo grid ảnh'); return }
         const all = _activityGrid.getAll()
-        const hasPhotos = all.some(Boolean)
-        if (!hasPhotos) { Toast.warning('Chưa có ảnh nào'); return }
+        if (!all.some(Boolean)) { Toast.warning('Chưa có ảnh nào'); return }
 
         saveBtn.disabled = true
         saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Đang lưu...'
@@ -603,6 +654,13 @@ window.CheckinModule = (() => {
           })
           Toast.success('Lưu ảnh hoạt động thành công!')
           saveBtn.classList.add('hidden')
+          // Cập nhật record local
+          if (_todayRecord) {
+            _todayRecord.activity_image1 = all[0] || _todayRecord.activity_image1
+            _todayRecord.activity_image2 = all[1] || _todayRecord.activity_image2
+            _todayRecord.activity_image3 = all[2] || _todayRecord.activity_image3
+            _todayRecord.activity_image4 = all[3] || _todayRecord.activity_image4
+          }
         } catch (e) {
           Toast.error(e.message)
         } finally {

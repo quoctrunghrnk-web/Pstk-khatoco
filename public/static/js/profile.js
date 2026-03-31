@@ -289,7 +289,10 @@ window.ProfileModule = (() => {
 
     async function handleCCCDImageClick(side) {
       try {
-        const base64 = await Camera.capture({ allowGallery: true })
+        // CCCD ảnh: không cần GPS/watermark, chỉ resize + nén
+        // Dùng processImage với geoInfo = null → watermark hiện "Chưa xác định"
+        // Hoặc dùng capture(null, true) để bỏ qua watermark cho CCCD
+        const base64 = await Camera.captureNoWatermark(true)
         if (side === 'front') {
           pendingFront = base64
           frontEl.innerHTML = `<img src="${base64}" class="w-full h-full object-cover" />`

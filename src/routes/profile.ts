@@ -91,10 +91,12 @@ profile.post('/upload-cccd', async (c) => {
     return c.json(err('Vui lòng cung cấp ít nhất một ảnh'), 400)
   }
 
-  // Validate base64 size (max 5MB per image)
-  const MAX_SIZE = 5 * 1024 * 1024 * (4 / 3) // base64 inflate factor
-  if (front && front.length > MAX_SIZE) return c.json(err('Ảnh mặt trước quá lớn (tối đa 5MB)'), 400)
-  if (back && back.length > MAX_SIZE) return c.json(err('Ảnh mặt sau quá lớn (tối đa 5MB)'), 400)
+  // Validate base64 size (max 380KB per image — tương ứng ~280KB binary, an toàn cho D1)
+  const IMG_MAX_B64 = 380 * 1024
+  if (front && (typeof front !== 'string' || !front.startsWith('data:image/') || front.length > IMG_MAX_B64))
+    return c.json(err('Ảnh mặt trước không hợp lệ hoặc quá lớn (tối đa 280KB)'), 400)
+  if (back && (typeof back !== 'string' || !back.startsWith('data:image/') || back.length > IMG_MAX_B64))
+    return c.json(err('Ảnh mặt sau không hợp lệ hoặc quá lớn (tối đa 280KB)'), 400)
 
   // Ensure profile exists
   const existing = await c.env.DB.prepare('SELECT id FROM profiles WHERE user_id = ?')
