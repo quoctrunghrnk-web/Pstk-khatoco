@@ -541,115 +541,194 @@ window.AdminModule = (() => {
     const totalSales = records.reduce((s, r) => s + (parseInt(r.sales_quantity) || 0), 0)
     const done = records.filter(r => r.status === 'checkout').length
 
+    // imgCell: ảnh lớn, chiếm hết chiều rộng nhóm
     const imgCell = (src, label) => src
-      ? `<div class="img-cell"><p class="img-label">${label}</p><img src="${src}" /></div>`
-      : `<div class="img-cell empty"><p class="img-label">${label}</p><div class="img-empty"></div></div>`
+      ? `<div class="img-cell"><span class="img-label">${label}</span><img src="${src}" /></div>`
+      : `<div class="img-cell empty"><span class="img-label">${label}</span><div class="img-empty"><span>Không có ảnh</span></div></div>`
 
     const rows = records.map((r, i) => {
       const actImgs = [r.activity_image1, r.activity_image2, r.activity_image3, r.activity_image4].filter(Boolean)
+      // Check-in: 2 ảnh, Check-out: 2 ảnh, Hoạt động: 1-4 ảnh
+      const ciImgs  = [r.checkin_image1,  r.checkin_image2 ].filter(Boolean)
+      const coImgs  = [r.checkout_image1, r.checkout_image2].filter(Boolean)
       return `
       <div class="staff-block">
+        <!-- Thông tin nhân viên -->
         <div class="staff-header">
           <span class="staff-no">${i + 1}</span>
           <div class="staff-info">
             <strong>${r.full_name}</strong>
-            <span class="staff-sub">@${r.username}${r.province ? ' · ' + r.province : ''}</span>
+            <span class="staff-sub">${r.username}${r.province ? ' &nbsp;·&nbsp; <i class="pin"></i>' + r.province : ''}</span>
           </div>
           <span class="status-badge ${r.status === 'checkout' ? 'done' : 'progress'}">
-            ${r.status === 'checkout' ? 'Hoàn thành' : 'Đang làm'}
+            ${r.status === 'checkout' ? '✓ Hoàn thành' : '⏳ Đang làm'}
           </span>
         </div>
+
+        <!-- Thời gian + doanh số -->
         <div class="info-row">
-          <div class="info-item"><span class="info-label">Check-in</span><span class="info-value">${formatTime(r.checkin_time)}</span></div>
-          <div class="info-item"><span class="info-label">Check-out</span><span class="info-value">${formatTime(r.checkout_time)}</span></div>
-          <div class="info-item"><span class="info-label">Số bán</span><span class="info-value sales">${r.sales_quantity ?? '--'} SP</span></div>
+          <div class="info-item">
+            <span class="info-label">🕐 Check-in</span>
+            <span class="info-value">${formatTime(r.checkin_time)}</span>
+          </div>
+          <div class="info-sep"></div>
+          <div class="info-item">
+            <span class="info-label">🕐 Check-out</span>
+            <span class="info-value">${formatTime(r.checkout_time)}</span>
+          </div>
+          <div class="info-sep"></div>
+          <div class="info-item">
+            <span class="info-label">📦 Số bán</span>
+            <span class="info-value sales">${r.sales_quantity != null ? r.sales_quantity + ' SP' : '--'}</span>
+          </div>
         </div>
-        ${r.checkin_address || r.checkout_address ? `
-        <div class="addr-row">
-          ${r.checkin_address ? `<p><b>CI:</b> ${r.checkin_address}</p>` : ''}
-          ${r.checkout_address ? `<p><b>CO:</b> ${r.checkout_address}</p>` : ''}
+
+        <!-- Địa chỉ + ghi chú -->
+        ${(r.checkin_address || r.checkout_address || r.notes) ? `
+        <div class="meta-row">
+          ${r.checkin_address  ? `<div class="meta-item"><span class="meta-icon">📍</span><span><b>CI:</b> ${r.checkin_address}</span></div>`  : ''}
+          ${r.checkout_address ? `<div class="meta-item"><span class="meta-icon">📍</span><span><b>CO:</b> ${r.checkout_address}</span></div>` : ''}
+          ${r.notes            ? `<div class="meta-item"><span class="meta-icon">📝</span><span>${r.notes}</span></div>`                        : ''}
         </div>` : ''}
-        ${r.notes ? `<div class="notes-row"><b>Ghi chú:</b> ${r.notes}</div>` : ''}
+
+        <!-- Ảnh: layout 3 cột cho 3 nhóm -->
         <div class="photos-section">
-          <div class="photos-group">
-            <p class="photos-title">Ảnh Check-in</p>
-            <div class="photos-row">${imgCell(r.checkin_image1,'CI-1')}${imgCell(r.checkin_image2,'CI-2')}</div>
+          <div class="photo-col ${ciImgs.length===0?'no-photo':''}">
+            <div class="photos-title">📷 Check-in</div>
+            <div class="photo-grid cols-${Math.min(ciImgs.length||1,2)}">
+              ${ciImgs.length > 0 ? ciImgs.map((s,j)=>imgCell(s,`CI-${j+1}`)).join('') : imgCell(null,'CI')}
+            </div>
           </div>
           ${actImgs.length > 0 ? `
-          <div class="photos-group">
-            <p class="photos-title">Ảnh hoạt động</p>
-            <div class="photos-row">${actImgs.map((img,idx) => imgCell(img,`HĐ-${idx+1}`)).join('')}</div>
+          <div class="photo-col">
+            <div class="photos-title">🎯 Hoạt động</div>
+            <div class="photo-grid cols-${Math.min(actImgs.length,2)}">
+              ${actImgs.map((s,j)=>imgCell(s,`HĐ-${j+1}`)).join('')}
+            </div>
           </div>` : ''}
-          <div class="photos-group">
-            <p class="photos-title">Ảnh Check-out</p>
-            <div class="photos-row">${imgCell(r.checkout_image1,'CO-1')}${imgCell(r.checkout_image2,'CO-2')}</div>
+          <div class="photo-col ${coImgs.length===0?'no-photo':''}">
+            <div class="photos-title">📷 Check-out</div>
+            <div class="photo-grid cols-${Math.min(coImgs.length||1,2)}">
+              ${coImgs.length > 0 ? coImgs.map((s,j)=>imgCell(s,`CO-${j+1}`)).join('') : imgCell(null,'CO')}
+            </div>
           </div>
         </div>
       </div>`
     }).join('')
 
-    return `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8">
+    return `<!DOCTYPE html><html lang="vi"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Báo cáo ${date}${province ? ' - ' + province : ''}</title>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family: Arial,sans-serif; font-size:12px; color:#1a1a1a; background:#fff; }
-.page-header { background:linear-gradient(135deg,#b91c1c,#7f1d1d); color:#fff; padding:16px 20px; margin-bottom:16px; }
-.page-header-top { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
-.page-logo { width:48px; height:48px; object-fit:contain; border-radius:10px; background:rgba(255,255,255,.15); padding:4px; flex-shrink:0; }
-.page-brand { flex:1; }
-.page-title { font-size:18px; font-weight:bold; margin-bottom:4px; }
-.page-sub { font-size:12px; opacity:.85; }
-.page-summary { display:flex; gap:12px; margin-top:10px; }
-.sum-item { background:rgba(255,255,255,.15); border-radius:8px; padding:6px 12px; text-align:center; min-width:80px; }
-.sum-label { font-size:10px; opacity:.8; }
-.sum-val { font-size:16px; font-weight:bold; }
-.staff-block { border:1px solid #e5e7eb; border-radius:10px; margin:0 12px 16px; overflow:hidden; page-break-inside:avoid; }
-.staff-header { display:flex; align-items:center; gap:10px; background:#f3f4f6; padding:10px 12px; border-bottom:1px solid #e5e7eb; }
-.staff-no { width:24px; height:24px; background:#dc2626; color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:11px; flex-shrink:0; }
-.staff-info { flex:1; }
-.staff-info strong { font-size:13px; display:block; }
-.staff-sub { font-size:10px; color:#6b7280; }
-.status-badge { font-size:10px; padding:2px 8px; border-radius:20px; font-weight:600; }
-.status-badge.done { background:#d1fae5; color:#065f46; }
-.status-badge.progress { background:#fef3c7; color:#92400e; }
-.info-row { display:flex; gap:8px; padding:8px 12px; border-bottom:1px solid #f3f4f6; }
-.info-item { flex:1; text-align:center; }
-.info-label { font-size:9px; color:#9ca3af; display:block; margin-bottom:2px; text-transform:uppercase; }
-.info-value { font-size:13px; font-weight:600; color:#374151; }
-.info-value.sales { color:#059669; }
-.addr-row { padding:6px 12px; font-size:10px; color:#6b7280; border-bottom:1px solid #f3f4f6; line-height:1.6; }
-.notes-row { padding:6px 12px; font-size:10px; color:#6b7280; border-bottom:1px solid #f3f4f6; font-style:italic; }
-.photos-section { padding:8px 12px 10px; }
-.photos-group { margin-bottom:8px; }
-.photos-title { font-size:9px; color:#9ca3af; text-transform:uppercase; font-weight:600; margin-bottom:4px; }
-.photos-row { display:flex; gap:6px; flex-wrap:wrap; }
-.img-cell { text-align:center; }
-.img-label { font-size:9px; color:#9ca3af; margin-bottom:2px; }
-.img-cell img { width:120px; height:90px; object-fit:cover; border-radius:6px; border:1px solid #e5e7eb; }
-.img-empty { width:120px; height:90px; background:#f9fafb; border-radius:6px; border:1px dashed #d1d5db; }
-.page-footer { text-align:center; padding:14px 12px; font-size:10px; color:#9ca3af; border-top:2px solid #e5e7eb; margin-top:8px; line-height:1.8; }
-@media print { @page { margin:10mm; size:A4; } .staff-block { page-break-inside:avoid; } }
+/* ── Reset ── */
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:#1a1a1a;background:#f8f9fa;}
+
+/* ── Page header ── */
+.page-header{background:linear-gradient(135deg,#c0392b 0%,#7f1d1d 100%);color:#fff;padding:18px 24px 14px;margin-bottom:0;}
+.hdr-top{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
+.hdr-logo-wrap{background:#fff;border-radius:12px;padding:6px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.2);}
+.hdr-logo{width:56px;height:56px;object-fit:contain;display:block;}
+.hdr-brand{flex:1;}
+.hdr-company{font-size:10px;opacity:.75;letter-spacing:.5px;text-transform:uppercase;margin-bottom:2px;}
+.hdr-title{font-size:20px;font-weight:800;line-height:1.1;margin-bottom:3px;}
+.hdr-sub{font-size:11px;opacity:.85;}
+.hdr-stats{display:flex;gap:10px;}
+.stat-box{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:8px 16px;text-align:center;min-width:90px;}
+.stat-label{font-size:9px;opacity:.75;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:2px;}
+.stat-val{font-size:20px;font-weight:800;display:block;}
+
+/* ── Staff block ── */
+.staff-block{background:#fff;border-radius:12px;margin:12px 12px 0;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);page-break-inside:avoid;}
+.staff-header{display:flex;align-items:center;gap:10px;background:linear-gradient(90deg,#f8f9fa,#fff);padding:10px 14px;border-bottom:2px solid #f0f0f0;}
+.staff-no{width:28px;height:28px;background:#c0392b;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;}
+.staff-info{flex:1;}
+.staff-info strong{font-size:13px;display:block;color:#111;font-weight:700;}
+.staff-sub{font-size:10px;color:#6b7280;margin-top:1px;}
+.status-badge{font-size:10px;padding:3px 10px;border-radius:20px;font-weight:700;white-space:nowrap;}
+.status-badge.done{background:#dcfce7;color:#166534;border:1px solid #86efac;}
+.status-badge.progress{background:#fef9c3;color:#854d0e;border:1px solid #fde047;}
+
+/* ── Info row ── */
+.info-row{display:flex;align-items:stretch;padding:0;border-bottom:1px solid #f0f0f0;}
+.info-item{flex:1;text-align:center;padding:10px 6px;}
+.info-sep{width:1px;background:#f0f0f0;}
+.info-label{font-size:9px;color:#9ca3af;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.3px;}
+.info-value{font-size:15px;font-weight:700;color:#1f2937;display:block;}
+.info-value.sales{color:#059669;}
+
+/* ── Meta (address/notes) ── */
+.meta-row{padding:6px 14px 4px;border-bottom:1px solid #f0f0f0;background:#fafafa;}
+.meta-item{display:flex;align-items:baseline;gap:5px;font-size:9.5px;color:#4b5563;line-height:1.5;}
+.meta-icon{flex-shrink:0;}
+
+/* ── Photos ── */
+.photos-section{display:flex;gap:0;border-top:1px solid #f0f0f0;}
+.photo-col{flex:1;padding:10px 10px 12px;border-right:1px solid #f0f0f0;}
+.photo-col:last-child{border-right:none;}
+.photos-title{font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;}
+.photo-grid{display:grid;gap:5px;}
+.photo-grid.cols-1{grid-template-columns:1fr;}
+.photo-grid.cols-2{grid-template-columns:1fr 1fr;}
+.photo-grid.cols-3{grid-template-columns:1fr 1fr 1fr;}
+.photo-grid.cols-4{grid-template-columns:1fr 1fr;}
+.img-cell{display:flex;flex-direction:column;align-items:center;}
+.img-label{font-size:8px;color:#9ca3af;margin-bottom:2px;display:block;}
+.img-cell img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:7px;border:1px solid #e5e7eb;display:block;}
+.img-empty{width:100%;aspect-ratio:4/3;background:#f9fafb;border-radius:7px;border:2px dashed #d1d5db;display:flex;align-items:center;justify-content:center;}
+.img-empty span{font-size:8px;color:#d1d5db;}
+.no-photo .photo-grid{opacity:.4;}
+
+/* ── Footer ── */
+.page-footer{display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 24px;margin:12px 12px 0;background:#fff;border-radius:12px 12px 0 0;border-top:3px solid #c0392b;font-size:10px;color:#6b7280;}
+.footer-logo-wrap{background:#fff;border-radius:7px;border:1px solid #e5e7eb;padding:3px;}
+.footer-logo{width:28px;height:28px;object-fit:contain;display:block;}
+.footer-text{line-height:1.6;}
+.footer-text strong{color:#c0392b;}
+
+/* ── Print ── */
+@media print{
+  body{background:#fff;}
+  @page{margin:8mm 8mm 10mm;size:A4 portrait;}
+  .staff-block{page-break-inside:avoid;break-inside:avoid;margin:8px 0 0;}
+  .page-footer{margin:8px 0 0;}
+}
 </style></head><body>
+
+<!-- Header -->
 <div class="page-header">
-  <div class="page-header-top">
-    <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt" class="page-logo" />
-    <div class="page-brand">
-      <div class="page-title">Báo cáo chấm công nhân viên</div>
-      <div class="page-sub">${dateVN}${province ? ' · ' + province : ' · Tất cả tỉnh/thành'}</div>
+  <div class="hdr-top">
+    <div class="hdr-logo-wrap">
+      <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt" class="hdr-logo" />
+    </div>
+    <div class="hdr-brand">
+      <div class="hdr-company">Nhân Kiệt · nhankiet.vn</div>
+      <div class="hdr-title">Báo cáo chấm công nhân viên</div>
+      <div class="hdr-sub">${dateVN}${province ? ' &nbsp;·&nbsp; ' + province : ' &nbsp;·&nbsp; Tất cả tỉnh/thành'}</div>
     </div>
   </div>
-  <div class="page-summary">
-    <div class="sum-item"><div class="sum-label">Nhân viên</div><div class="sum-val">${records.length}</div></div>
-    <div class="sum-item"><div class="sum-label">Hoàn thành</div><div class="sum-val">${done}</div></div>
-    <div class="sum-item"><div class="sum-label">Tổng bán</div><div class="sum-val">${totalSales} SP</div></div>
+  <div class="hdr-stats">
+    <div class="stat-box"><span class="stat-label">Nhân viên</span><span class="stat-val">${records.length}</span></div>
+    <div class="stat-box"><span class="stat-label">Hoàn thành</span><span class="stat-val">${done}</span></div>
+    <div class="stat-box"><span class="stat-label">Tổng bán</span><span class="stat-val">${totalSales}<small style="font-size:12px;font-weight:600;opacity:.8"> SP</small></span></div>
+    <div class="stat-box"><span class="stat-label">Tỷ lệ HT</span><span class="stat-val">${records.length > 0 ? Math.round(done/records.length*100) : 0}<small style="font-size:12px;font-weight:600;opacity:.8">%</small></span></div>
   </div>
 </div>
-${rows || '<p style="text-align:center;padding:40px;color:#9ca3af">Không có dữ liệu</p>'}
+
+${rows || '<div style="text-align:center;padding:60px;color:#9ca3af;font-size:14px;">Không có dữ liệu trong ngày này</div>'}
+
+<!-- Footer -->
 <div class="page-footer">
-  <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt" style="width:28px;height:28px;object-fit:contain;border-radius:6px;vertical-align:middle;margin-right:6px;" />
-  <span>Phát triển bởi <strong>nhankiet.vn</strong> &nbsp;·&nbsp; © 2026 Nhân Kiệt. All rights reserved.</span>
-  <br/><span style="font-size:9px;color:#c0c0c0;">Báo cáo tạo lúc ${new Date().toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})}</span>
+  <div class="footer-logo-wrap">
+    <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt" class="footer-logo" />
+  </div>
+  <div class="footer-text">
+    Phát triển bởi <strong>nhankiet.vn</strong> &nbsp;·&nbsp; © 2026 Nhân Kiệt. All rights reserved.
+    <br/><span style="font-size:9px;color:#9ca3af;">Báo cáo tạo lúc ${new Date().toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})}</span>
+  </div>
 </div>
+
 </body></html>`
   }
 

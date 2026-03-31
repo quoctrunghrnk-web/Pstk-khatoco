@@ -47,55 +47,83 @@ window.Auth = (() => {
 
   function renderLoginPage() {
     return `
-    <div class="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 flex items-center justify-center p-4">
-      <div class="w-full max-w-sm">
-        <!-- Logo -->
-        <div class="text-center mb-8">
-          <div class="inline-flex items-center justify-center mb-4">
-            <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt"
-              class="w-20 h-20 object-contain rounded-2xl bg-white/10 backdrop-blur p-1 shadow-lg" />
-          </div>
-          <h1 class="text-2xl font-bold text-white">Nhân Viên Thị Trường</h1>
-          <p class="text-blue-200 text-sm mt-1">Vui lòng đăng nhập để tiếp tục</p>
-        </div>
+    <div class="min-h-screen bg-gradient-to-br from-slate-50 via-gray-100 to-slate-200 flex flex-col">
+      <!-- Top decorative bar -->
+      <div class="h-1.5 bg-gradient-to-r from-red-600 via-red-500 to-orange-400"></div>
 
-        <!-- Form -->
-        <div class="bg-white rounded-2xl shadow-2xl p-6">
-          <form id="login-form" class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Tên đăng nhập</label>
-              <div class="relative">
-                <i class="fas fa-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                <input type="text" id="login-username" placeholder="Nhập tên đăng nhập"
-                  class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
-                  autocomplete="username" required />
+      <div class="flex-1 flex flex-col items-center justify-center p-4 sm:p-8">
+        <div class="w-full max-w-md">
+
+          <!-- Logo card -->
+          <div class="text-center mb-8">
+            <div class="inline-flex flex-col items-center">
+              <div class="bg-white rounded-3xl shadow-xl p-5 mb-5 border border-gray-100">
+                <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt"
+                  class="w-24 h-24 object-contain" />
               </div>
+              <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Nhân Viên Thị Trường</h1>
+              <p class="text-gray-500 text-sm mt-1.5">Hệ thống quản lý chấm công & hoạt động</p>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label>
-              <div class="relative">
-                <i class="fas fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                <input type="password" id="login-password" placeholder="Nhập mật khẩu"
-                  class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
-                  autocomplete="current-password" required />
-              </div>
+          </div>
+
+          <!-- Login card -->
+          <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+            <!-- Card header -->
+            <div class="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4">
+              <h2 class="text-white font-semibold text-base flex items-center gap-2">
+                <i class="fas fa-sign-in-alt"></i> Đăng nhập tài khoản
+              </h2>
             </div>
-            <button type="submit" id="login-btn"
-              class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2">
-              <i class="fas fa-sign-in-alt"></i>
-              <span>Đăng nhập</span>
-            </button>
-          </form>
-          <p id="login-error" class="text-red-500 text-sm text-center mt-3 hidden"></p>
-        </div>
-        <p class="text-center text-blue-200 text-sm mt-5">
-          Chưa có tài khoản?
-          <button id="btn-go-register" class="text-white font-semibold underline ml-1">Đăng ký ngay</button>
-        </p>
-        <p class="text-center text-blue-200 text-xs mt-2">v${APP_CONFIG.VERSION}</p>
-        <div class="text-center text-blue-300 mt-4 text-xs space-y-0.5">
-          <p>Phát triển bởi <a href="https://nhankiet.vn" class="text-white font-semibold underline">nhankiet.vn</a></p>
-          <p>© 2026 Nhân Kiệt. All rights reserved.</p>
+            <!-- Card body -->
+            <div class="p-6 sm:p-8">
+              <form id="login-form" class="space-y-5">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Số điện thoại / Tên đăng nhập</label>
+                  <div class="relative">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                      <i class="fas fa-mobile-alt text-base"></i>
+                    </span>
+                    <input type="text" id="login-username" placeholder="Ví dụ: 0901234567"
+                      class="w-full pl-11 pr-4 py-3.5 border-2 border-gray-200 rounded-2xl focus:border-red-500 focus:ring-0 outline-none text-sm font-medium transition-colors bg-gray-50 focus:bg-white"
+                      autocomplete="username" inputmode="tel" required />
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Mật khẩu</label>
+                  <div class="relative">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                      <i class="fas fa-lock text-base"></i>
+                    </span>
+                    <input type="password" id="login-password" placeholder="Nhập mật khẩu"
+                      class="w-full pl-11 pr-12 py-3.5 border-2 border-gray-200 rounded-2xl focus:border-red-500 focus:ring-0 outline-none text-sm font-medium transition-colors bg-gray-50 focus:bg-white"
+                      autocomplete="current-password" required />
+                    <button type="button" id="toggle-pw"
+                      class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+                      <i class="fas fa-eye text-base"></i>
+                    </button>
+                  </div>
+                </div>
+                <p id="login-error" class="text-red-500 text-sm text-center hidden bg-red-50 rounded-xl px-3 py-2"></p>
+                <button type="submit" id="login-btn"
+                  class="w-full py-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-200 text-base">
+                  <i class="fas fa-sign-in-alt"></i>
+                  <span>Đăng nhập</span>
+                </button>
+              </form>
+            </div>
+            <!-- Card footer -->
+            <div class="border-t border-gray-100 px-6 py-4 bg-gray-50 text-center">
+              <span class="text-gray-500 text-sm">Chưa có tài khoản?</span>
+              <button id="btn-go-register" class="text-red-600 font-bold hover:text-red-700 ml-2 text-sm transition-colors">Đăng ký ngay →</button>
+            </div>
+          </div>
+
+          <!-- Version + footer -->
+          <div class="text-center mt-6 space-y-1">
+            <p class="text-gray-400 text-xs">v${APP_CONFIG.VERSION}</p>
+            <p class="text-gray-400 text-xs">Phát triển bởi <a href="https://nhankiet.vn" class="text-red-500 font-semibold hover:underline">nhankiet.vn</a></p>
+            <p class="text-gray-400 text-xs">© 2026 Nhân Kiệt. All rights reserved.</p>
+          </div>
         </div>
       </div>
     </div>
@@ -106,6 +134,17 @@ window.Auth = (() => {
     const form = document.getElementById('login-form')
     const errEl = document.getElementById('login-error')
     const btn = document.getElementById('login-btn')
+
+    // Toggle show/hide password
+    const togglePw = document.getElementById('toggle-pw')
+    const pwInput  = document.getElementById('login-password')
+    if (togglePw && pwInput) {
+      togglePw.addEventListener('click', () => {
+        const show = pwInput.type === 'password'
+        pwInput.type = show ? 'text' : 'password'
+        togglePw.innerHTML = show ? '<i class="fas fa-eye-slash text-base"></i>' : '<i class="fas fa-eye text-base"></i>'
+      })
+    }
 
     // Link sang trang đăng ký
     const gotoRegister = document.getElementById('btn-go-register')
