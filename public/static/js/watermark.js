@@ -162,28 +162,70 @@ window.Watermark = (() => {
           ctx.fillText(line, textX, y, innerW)
         })
 
-        // ── Nhãn app góc trên trái ──────────
+        // ── Nhãn Nhân Kiệt góc trên trái (logo + text) ──
         const labelFs = Math.max(13, Math.floor(fs * 0.75))
-        ctx.font       = `bold ${labelFs}px Arial`
+        const lbPad   = Math.floor(labelFs * 0.5)
+        const lbH     = labelFs + lbPad * 2
+        const lbX     = Math.floor(W * 0.01)
+        const lbY     = Math.floor(H * 0.01)
+        const logoSize = lbH                          // logo vuông bằng chiều cao badge
+        const brandText = 'nhankiet.vn'
+        ctx.font = `bold ${labelFs}px Arial`
         ctx.shadowBlur = 2
-        const label    = 'NVTT'
-        const lbW      = ctx.measureText(label).width
-        const lbPad    = Math.floor(labelFs * 0.5)
-        const lbH      = labelFs + lbPad * 2
-        const lbX      = Math.floor(W * 0.01)
-        const lbY      = Math.floor(H * 0.01)
+        const brandW  = ctx.measureText(brandText).width
+        const totalBadgeW = logoSize + Math.floor(lbPad * 0.5) + brandW + lbPad * 2
 
-        ctx.fillStyle = 'rgba(30,58,95,0.80)'
+        // Nền badge
+        ctx.fillStyle = 'rgba(30,58,95,0.82)'
         ctx.beginPath()
-        ctx.roundRect(lbX, lbY, lbW + lbPad * 2, lbH, 6)
+        ctx.roundRect(lbX, lbY, totalBadgeW, lbH, 6)
         ctx.fill()
-        ctx.fillStyle = '#FFFFFF'
-        ctx.textBaseline = 'middle'
-        ctx.fillText(label, lbX + lbPad, lbY + lbH / 2)
 
-        ctx.shadowBlur = 0
+        // Vẽ logo Nhân Kiệt (load từ URL, dùng cache nếu có)
+        const _drawBrand = () => {
+          ctx.fillStyle = '#FFFFFF'
+          ctx.textBaseline = 'middle'
+          ctx.shadowBlur = 1
+          ctx.fillText(brandText, lbX + logoSize + Math.floor(lbPad * 0.5) + lbPad * 0.5, lbY + lbH / 2, brandW + 4)
+          ctx.shadowBlur = 0
+          resolve(canvas.toDataURL('image/jpeg', APP_CONFIG.IMG_QUALITY))
+        }
 
-        resolve(canvas.toDataURL('image/jpeg', APP_CONFIG.IMG_QUALITY))
+        // Thử load logo, nếu lỗi vẽ text thay thế
+        const logoImg = new Image()
+        logoImg.crossOrigin = 'anonymous'
+        logoImg.onload = () => {
+          // Clip vùng logo bo góc
+          ctx.save()
+          const lr = 4
+          ctx.beginPath()
+          ctx.moveTo(lbX + lr, lbY)
+          ctx.lineTo(lbX + logoSize - lr, lbY)
+          ctx.quadraticCurveTo(lbX + logoSize, lbY, lbX + logoSize, lbY + lr)
+          ctx.lineTo(lbX + logoSize, lbY + lbH - lr)
+          ctx.quadraticCurveTo(lbX + logoSize, lbY + lbH, lbX + logoSize - lr, lbY + lbH)
+          ctx.lineTo(lbX + lr, lbY + lbH)
+          ctx.quadraticCurveTo(lbX, lbY + lbH, lbX, lbY + lbH - lr)
+          ctx.lineTo(lbX, lbY + lr)
+          ctx.quadraticCurveTo(lbX, lbY, lbX + lr, lbY)
+          ctx.closePath()
+          ctx.clip()
+          ctx.drawImage(logoImg, lbX, lbY, logoSize, lbH)
+          ctx.restore()
+          _drawBrand()
+        }
+        logoImg.onerror = () => {
+          // Fallback: vẽ chữ NK thay logo
+          ctx.fillStyle = 'rgba(255,255,255,0.9)'
+          ctx.font = `bold ${Math.floor(labelFs * 0.85)}px Arial`
+          ctx.textBaseline = 'middle'
+          ctx.fillText('NK', lbX + logoSize * 0.15, lbY + lbH / 2)
+          _drawBrand()
+        }
+        logoImg.src = 'https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg'
+
+        // (resolve sẽ được gọi trong _drawBrand sau khi logo load xong)
+        return   // chờ logo load, không resolve ngay
       }
       img.onerror = () => resolve(base64)
       img.src = base64

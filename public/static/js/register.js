@@ -184,10 +184,12 @@ window.RegisterModule = (() => {
         <button id="btn-back-login" class="w-10 h-10 bg-white/15 hover:bg-white/25 rounded-full flex items-center justify-center text-white mr-3 transition-colors">
           <i class="fas fa-arrow-left"></i>
         </button>
-        <div>
+        <div class="flex-1">
           <h1 class="text-xl font-bold text-white">Đăng ký tài khoản</h1>
           <p class="text-blue-200 text-xs">Điền đầy đủ thông tin để đăng ký</p>
         </div>
+        <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt"
+          class="w-10 h-10 object-contain rounded-xl bg-white/15 p-0.5 flex-shrink-0" />
       </div>
 
       <!-- Step Indicator -->
@@ -403,7 +405,11 @@ window.RegisterModule = (() => {
         </div>
 
         <!-- ── Navigation Buttons ── -->
-        <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3 flex gap-3 safe-area-bottom">
+        <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 safe-area-bottom">
+          <div class="text-center py-1 bg-gray-50 border-b border-gray-100">
+            <p class="text-gray-400 text-xs">Phát triển bởi <a href="https://nhankiet.vn" class="text-blue-500 font-semibold">nhankiet.vn</a> &nbsp;·&nbsp; © 2026 Nhân Kiệt. All rights reserved.</p>
+          </div>
+        <div class="px-4 py-3 flex gap-3">
           <button id="reg-btn-prev" type="button"
             class="invisible flex-none w-12 h-12 bg-gray-100 hover:bg-gray-200 rounded-xl flex items-center justify-center text-gray-600 transition-colors">
             <i class="fas fa-chevron-left"></i>
@@ -416,6 +422,7 @@ window.RegisterModule = (() => {
             class="hidden flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2">
             <i class="fas fa-paper-plane"></i> Đăng ký
           </button>
+        </div>
         </div>
 
       </div>

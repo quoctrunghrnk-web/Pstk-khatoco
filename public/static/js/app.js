@@ -132,6 +132,9 @@ window.App = (() => {
           </button>
         `).join('')}
       </div>
+      <div class="text-center py-1 border-t border-gray-50 bg-gray-50">
+        <p class="text-gray-400 text-xs leading-tight">Phát triển bởi <a href="https://nhankiet.vn" class="text-blue-500 font-semibold">nhankiet.vn</a> &nbsp;·&nbsp; © 2026 Nhân Kiệt. All rights reserved.</p>
+      </div>
     </nav>`
   }
 

@@ -23,11 +23,13 @@ window.ProfileModule = (() => {
           <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur">
             <i class="fas fa-user text-2xl"></i>
           </div>
-          <div>
+          <div class="flex-1 min-w-0">
             <h2 class="text-xl font-bold">${user?.full_name || 'Nhân viên'}</h2>
             <p class="text-blue-200 text-sm">@${user?.username}</p>
             <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full">${user?.role === 'admin' ? 'Quản trị viên' : 'Nhân viên'}</span>
           </div>
+          <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt"
+            class="w-10 h-10 object-contain rounded-xl bg-white/15 p-0.5 flex-shrink-0" />
         </div>
       </div>
 

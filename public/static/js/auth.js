@@ -51,8 +51,9 @@ window.Auth = (() => {
       <div class="w-full max-w-sm">
         <!-- Logo -->
         <div class="text-center mb-8">
-          <div class="inline-flex items-center justify-center w-20 h-20 bg-white/10 rounded-2xl mb-4 backdrop-blur">
-            <i class="fas fa-map-marker-alt text-4xl text-white"></i>
+          <div class="inline-flex items-center justify-center mb-4">
+            <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt"
+              class="w-20 h-20 object-contain rounded-2xl bg-white/10 backdrop-blur p-1 shadow-lg" />
           </div>
           <h1 class="text-2xl font-bold text-white">Nhân Viên Thị Trường</h1>
           <p class="text-blue-200 text-sm mt-1">Vui lòng đăng nhập để tiếp tục</p>
@@ -92,6 +93,10 @@ window.Auth = (() => {
           <button id="btn-go-register" class="text-white font-semibold underline ml-1">Đăng ký ngay</button>
         </p>
         <p class="text-center text-blue-200 text-xs mt-2">v${APP_CONFIG.VERSION}</p>
+        <div class="text-center text-blue-300 mt-4 text-xs space-y-0.5">
+          <p>Phát triển bởi <a href="https://nhankiet.vn" class="text-white font-semibold underline">nhankiet.vn</a></p>
+          <p>© 2026 Nhân Kiệt. All rights reserved.</p>
+        </div>
       </div>
     </div>
     `

@@ -57,9 +57,13 @@ window.AdminModule = (() => {
       <!-- Header -->
       <div class="bg-gradient-to-br from-red-700 to-red-900 text-white px-4 pt-12 pb-20">
         <div class="flex items-start justify-between">
-          <div>
-            <h2 class="text-xl font-bold mb-1"><i class="fas fa-shield-alt mr-2"></i>Quản trị viên</h2>
-            <p class="text-red-200 text-sm">Quản lý nhân viên và theo dõi hoạt động</p>
+          <div class="flex items-center gap-3">
+            <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt"
+              class="w-10 h-10 object-contain rounded-xl bg-white/15 p-0.5 flex-shrink-0" />
+            <div>
+              <h2 class="text-xl font-bold mb-1"><i class="fas fa-shield-alt mr-2"></i>Quản trị viên</h2>
+              <p class="text-red-200 text-sm">Quản lý nhân viên và theo dõi hoạt động</p>
+            </div>
           </div>
           <div class="flex items-center gap-2 mt-1">
             <button id="btn-admin-change-pw"
@@ -590,6 +594,9 @@ window.AdminModule = (() => {
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family: Arial,sans-serif; font-size:12px; color:#1a1a1a; background:#fff; }
 .page-header { background:linear-gradient(135deg,#b91c1c,#7f1d1d); color:#fff; padding:16px 20px; margin-bottom:16px; }
+.page-header-top { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+.page-logo { width:48px; height:48px; object-fit:contain; border-radius:10px; background:rgba(255,255,255,.15); padding:4px; flex-shrink:0; }
+.page-brand { flex:1; }
 .page-title { font-size:18px; font-weight:bold; margin-bottom:4px; }
 .page-sub { font-size:12px; opacity:.85; }
 .page-summary { display:flex; gap:12px; margin-top:10px; }
@@ -620,12 +627,17 @@ body { font-family: Arial,sans-serif; font-size:12px; color:#1a1a1a; background:
 .img-label { font-size:9px; color:#9ca3af; margin-bottom:2px; }
 .img-cell img { width:120px; height:90px; object-fit:cover; border-radius:6px; border:1px solid #e5e7eb; }
 .img-empty { width:120px; height:90px; background:#f9fafb; border-radius:6px; border:1px dashed #d1d5db; }
-.page-footer { text-align:center; padding:12px; font-size:10px; color:#9ca3af; border-top:1px solid #e5e7eb; margin-top:8px; }
+.page-footer { text-align:center; padding:14px 12px; font-size:10px; color:#9ca3af; border-top:2px solid #e5e7eb; margin-top:8px; line-height:1.8; }
 @media print { @page { margin:10mm; size:A4; } .staff-block { page-break-inside:avoid; } }
 </style></head><body>
 <div class="page-header">
-  <div class="page-title">Báo cáo chấm công nhân viên</div>
-  <div class="page-sub">${dateVN}${province ? ' · ' + province : ' · Tất cả tỉnh/thành'}</div>
+  <div class="page-header-top">
+    <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt" class="page-logo" />
+    <div class="page-brand">
+      <div class="page-title">Báo cáo chấm công nhân viên</div>
+      <div class="page-sub">${dateVN}${province ? ' · ' + province : ' · Tất cả tỉnh/thành'}</div>
+    </div>
+  </div>
   <div class="page-summary">
     <div class="sum-item"><div class="sum-label">Nhân viên</div><div class="sum-val">${records.length}</div></div>
     <div class="sum-item"><div class="sum-label">Hoàn thành</div><div class="sum-val">${done}</div></div>
@@ -633,7 +645,11 @@ body { font-family: Arial,sans-serif; font-size:12px; color:#1a1a1a; background:
   </div>
 </div>
 ${rows || '<p style="text-align:center;padding:40px;color:#9ca3af">Không có dữ liệu</p>'}
-<div class="page-footer">Báo cáo tạo lúc ${new Date().toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})}</div>
+<div class="page-footer">
+  <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt" style="width:28px;height:28px;object-fit:contain;border-radius:6px;vertical-align:middle;margin-right:6px;" />
+  <span>Phát triển bởi <strong>nhankiet.vn</strong> &nbsp;·&nbsp; © 2026 Nhân Kiệt. All rights reserved.</span>
+  <br/><span style="font-size:9px;color:#c0c0c0;">Báo cáo tạo lúc ${new Date().toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})}</span>
+</div>
 </body></html>`
   }
 

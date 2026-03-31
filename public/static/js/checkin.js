@@ -34,7 +34,11 @@ window.CheckinModule = (() => {
       <!-- Header -->
       <div class="bg-gradient-to-br from-green-700 to-green-900 text-white px-4 pt-12 pb-20">
         <div class="flex items-center justify-between mb-1">
-          <h2 class="text-xl font-bold">Check-in / Check-out</h2>
+          <div class="flex items-center gap-2">
+            <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt"
+              class="w-8 h-8 object-contain rounded-lg bg-white/15 p-0.5 flex-shrink-0" />
+            <h2 class="text-xl font-bold">Check-in / Check-out</h2>
+          </div>
           <span id="ci-live-time" class="text-green-200 text-sm font-mono"></span>
         </div>
         <p class="text-green-200 text-sm" id="ci-date-display">Đang tải...</p>
