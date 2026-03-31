@@ -256,28 +256,35 @@ window.Camera = (() => {
             </div>`
 
           try {
-            // Lấy GPS —————————————————————————————
+            // Lấy GPS — timeout 3s để không block quá lâu
             let geo = null
             if (typeof getGeo === 'function') {
-              // getGeo có thể là sync hoặc async
-              try { geo = await Promise.resolve(getGeo()) } catch {}
-            } else {
-              // Tự lấy GPS mỗi khi chụp (fallback)
-              if (window.Geo) {
-                try {
-                  geo = await Geo.getPositionWithAddress()
-                } catch { /* watermark hiện "Chưa xác định" */ }
-              }
+              try {
+                const result = await Promise.race([
+                  Promise.resolve(getGeo()),
+                  new Promise((_, rej) => setTimeout(() => rej(new Error('geo timeout')), 3000))
+                ])
+                geo = result
+              } catch { geo = null }
+            } else if (window.Geo) {
+              try {
+                geo = await Promise.race([
+                  Geo.getPositionWithAddress(),
+                  new Promise((_, rej) => setTimeout(() => rej(new Error('geo timeout')), 5000))
+                ])
+              } catch { geo = null }
             }
 
             const base64 = await capture(geo, opts.allowGallery !== false)
+            if (!base64) throw new Error('Không lấy được ảnh')
             photos[idx] = base64
             render()
             if (onChange) onChange([...photos])
           } catch (e) {
             render()   // phục hồi slot
-            if (e.message !== 'cancelled') {
+            if (e.message && e.message !== 'cancelled' && e.message !== 'geo timeout') {
               if (window.Toast) Toast.error('Lỗi chụp ảnh: ' + e.message)
+              else console.error('Camera error:', e)
             }
           }
         })

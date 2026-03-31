@@ -314,14 +314,13 @@ window.CheckinModule = (() => {
     }
   }
 
-  // ── Khởi tạo activity grid (chỉ 1 lần) ─────
+  // ── Khởi tạo activity grid ───────────────────
+  // Lần đầu: tạo grid mới
+  // Lần sau (đã init): chỉ cập nhật ảnh qua setPhotos()
   function initActivityGrid(existingImages, readonly) {
-    if (_activityInited) return   // tránh gọi lại 2 lần
     const container = document.getElementById('activity-photo-grid')
     const saveBtn   = document.getElementById('btn-save-activity')
     if (!container) return
-
-    _activityInited = true
 
     const photos = [
       existingImages?.[0] ?? null,
@@ -329,6 +328,20 @@ window.CheckinModule = (() => {
       existingImages?.[2] ?? null,
       existingImages?.[3] ?? null,
     ]
+
+    // Nếu grid đã tạo rồi và không có ảnh pending chưa lưu:
+    // chỉ cập nhật ảnh từ server, không tạo lại
+    if (_activityInited && _activityGrid) {
+      const saveBtn = document.getElementById('btn-save-activity')
+      const hasPending = saveBtn && !saveBtn.classList.contains('hidden')
+      // Nếu user đang có ảnh chưa lưu (nút save đang hiện) → giữ nguyên grid
+      if (!hasPending) {
+        _activityGrid.setPhotos(photos)
+      }
+      return
+    }
+
+    _activityInited = true
 
     if (readonly) {
       // Sau checkout: chỉ xem
@@ -369,6 +382,7 @@ window.CheckinModule = (() => {
             })
             Toast.success('Lưu ảnh hoạt động thành công!')
             saveBtn.classList.add('hidden')
+            // Cập nhật _todayRecord để setPhotos() lần sau có ảnh đúng
             if (_todayRecord) {
               _todayRecord.activity_image1 = all[0] || _todayRecord.activity_image1
               _todayRecord.activity_image2 = all[1] || _todayRecord.activity_image2

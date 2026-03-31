@@ -21,13 +21,23 @@ window.AdminModule = (() => {
 
   // ── Province select HTML helper ──────────────
   function provinceSelect(id, selected = '', allLabel = 'Tất cả tỉnh/thành') {
-    const opts = (window.PROVINCES || []).map(p =>
+    const provinces = window.PROVINCES || []
+    const opts = provinces.map(p =>
       `<option value="${p}" ${p === selected ? 'selected' : ''}>${p}</option>`
     ).join('')
-    return `<select id="${id}" class="w-full px-3 py-2 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-400 bg-white">
-      <option value="">${allLabel}</option>
-      ${opts}
-    </select>`
+    // Wrapper relative + icon chevron để luôn thấy rõ đây là dropdown
+    return `
+      <div class="relative">
+        <select id="${id}"
+          class="w-full pl-3 pr-8 py-2 border border-gray-300 rounded-xl text-sm
+                 bg-white focus:outline-none focus:ring-2 focus:ring-red-400
+                 appearance-none cursor-pointer">
+          <option value="">${allLabel}</option>
+          ${opts}
+        </select>
+        <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2
+                  text-gray-400 text-xs pointer-events-none"></i>
+      </div>`
   }
 
   function renderPage() {
