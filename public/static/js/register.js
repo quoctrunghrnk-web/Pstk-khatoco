@@ -12,6 +12,7 @@ window.RegisterModule = (() => {
   const TOTAL_STEPS = 3
   let _cccdFront = null  // base64
   let _cccdBack  = null  // base64
+  let _activeProvinces = []  // [{ id, name }] từ API
 
   // ── Helpers ──────────────────────────────────
   function setStep(n) {
@@ -56,6 +57,28 @@ window.RegisterModule = (() => {
   function val(id) {
     const el = document.getElementById(id)
     return el ? el.value.trim() : ''
+  }
+
+  // ── Load active provinces từ API ─────────────
+  async function loadActiveProvinces() {
+    try {
+      const res = await API.getActiveProvinces()
+      _activeProvinces = res.data || []
+    } catch {
+      _activeProvinces = []
+    }
+    // Populate dropdown sau khi load
+    const sel = document.getElementById('reg-province')
+    if (!sel) return
+    if (_activeProvinces.length === 0) {
+      sel.innerHTML = '<option value="">-- Chưa có tỉnh/thành nào --</option>'
+      return
+    }
+    sel.innerHTML =
+      '<option value="">-- Chọn tỉnh/thành phố --</option>' +
+      _activeProvinces.map(p =>
+        `<option value="${p.name}">${p.name}</option>`
+      ).join('')
   }
 
   // ── Validate from step ────────────────────────
@@ -231,9 +254,10 @@ window.RegisterModule = (() => {
               <div class="relative">
                 <i class="fas fa-map-marker-alt absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
                 <select id="reg-province"
-                  class="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white appearance-none">
-                  ${window.PROVINCES_OPTIONS ? window.PROVINCES_OPTIONS() : '<option value="">-- Chọn tỉnh/thành phố --</option>'}
+                  class="w-full pl-9 pr-8 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white appearance-none">
+                  <option value="">-- Đang tải danh sách... --</option>
                 </select>
+                <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
               </div>
             </div>
             <!-- Password -->
@@ -466,6 +490,10 @@ window.RegisterModule = (() => {
     _step = 1
     _cccdFront = null
     _cccdBack  = null
+    _activeProvinces = []
+
+    // Load danh sách tỉnh từ API ngay khi mở trang
+    loadActiveProvinces()
 
     // Back to login
     const btnBack = document.getElementById('btn-back-login')

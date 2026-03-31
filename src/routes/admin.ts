@@ -297,16 +297,84 @@ admin.get('/reports/summary', async (c) => {
 })
 
 // ── GET /api/admin/reports/provinces ─────────────────────────────────────
-// Danh sách các tỉnh/thành có nhân viên
+// Danh sách các tỉnh/thành có nhân viên (legacy - giữ lại)
 admin.get('/reports/provinces', async (c) => {
   const rows = await c.env.DB.prepare(`
-    SELECT DISTINCT province
-    FROM users
+    SELECT DISTINCT province FROM users
     WHERE province IS NOT NULL AND province != '' AND account_status != 'resigned'
     ORDER BY province
   `).all()
   const list = rows.results.map((r: any) => r.province)
   return c.json(ok(list))
+})
+
+// ── GET /api/admin/provinces ──────────────────────────────────────────────
+// Danh sách tỉnh/thành admin đã kích hoạt (từ bảng active_provinces)
+admin.get('/provinces', async (c) => {
+  const rows = await c.env.DB.prepare(
+    'SELECT id, name, sort_order FROM active_provinces ORDER BY sort_order, name'
+  ).all()
+  return c.json(ok(rows.results))
+})
+
+// ── POST /api/admin/provinces ─────────────────────────────────────────────
+// Thêm tỉnh mới vào danh sách hoạt động
+admin.post('/provinces', async (c) => {
+  const { name } = await c.req.json()
+  if (!name || !name.trim()) return c.json(err('Tên tỉnh/thành không được để trống'), 400)
+  const trimmed = name.trim()
+
+  // Lấy sort_order tiếp theo
+  const maxRow = await c.env.DB.prepare(
+    'SELECT COALESCE(MAX(sort_order), 0) AS mx FROM active_provinces'
+  ).first<{ mx: number }>()
+  const nextOrder = (maxRow?.mx ?? 0) + 1
+
+  try {
+    const result = await c.env.DB.prepare(
+      'INSERT INTO active_provinces (name, sort_order) VALUES (?, ?)'
+    ).bind(trimmed, nextOrder).run()
+    return c.json(ok({ id: result.meta.last_row_id, name: trimmed }, 'Thêm tỉnh/thành thành công'), 201)
+  } catch (e: any) {
+    if (e?.message?.includes('UNIQUE')) return c.json(err('Tỉnh/thành này đã tồn tại'), 400)
+    throw e
+  }
+})
+
+// ── DELETE /api/admin/provinces/:id ──────────────────────────────────────
+// Xóa tỉnh khỏi danh sách hoạt động
+admin.delete('/provinces/:id', async (c) => {
+  const id = parseInt(c.req.param('id'))
+  if (isNaN(id)) return c.json(err('ID không hợp lệ'), 400)
+
+  // Kiểm tra còn nhân viên thuộc tỉnh này không
+  const prov = await c.env.DB.prepare('SELECT name FROM active_provinces WHERE id = ?').bind(id).first<{ name: string }>()
+  if (!prov) return c.json(err('Không tìm thấy tỉnh/thành'), 404)
+
+  const inUse = await c.env.DB.prepare(
+    "SELECT COUNT(*) AS cnt FROM users WHERE province = ? AND account_status != 'resigned'"
+  ).bind(prov.name).first<{ cnt: number }>()
+  if ((inUse?.cnt ?? 0) > 0) {
+    return c.json(err(`Còn ${inUse!.cnt} nhân viên đang thuộc tỉnh này. Hãy chuyển họ sang tỉnh khác trước.`), 400)
+  }
+
+  await c.env.DB.prepare('DELETE FROM active_provinces WHERE id = ?').bind(id).run()
+  return c.json(ok(null, 'Đã xóa tỉnh/thành'))
+})
+
+// ── PATCH /api/admin/users/:id/province ──────────────────────────────────
+// Gán tỉnh/thành cho nhân viên
+admin.patch('/users/:id/province', async (c) => {
+  const id = parseInt(c.req.param('id'))
+  if (isNaN(id)) return c.json(err('ID không hợp lệ'), 400)
+
+  const { province } = await c.req.json()
+  // province có thể là "" để bỏ gán
+  await c.env.DB.prepare(
+    'UPDATE users SET province = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+  ).bind(province || null, id).run()
+
+  return c.json(ok(null, province ? `Đã gán: ${province}` : 'Đã bỏ tỉnh/thành'))
 })
 
 export default admin

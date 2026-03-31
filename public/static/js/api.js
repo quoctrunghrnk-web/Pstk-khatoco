@@ -73,5 +73,12 @@ window.API = (() => {
       return request('GET', `/admin/reports/summary?${q}`)
     },
     getProvinces: () => request('GET', '/admin/reports/provinces'),
+
+    // Public: danh sách tỉnh/thành hoạt động (không cần đăng nhập)
+    getActiveProvinces: () => request('GET', '/provinces'),
+
+    // Admin - Quản lý tỉnh/thành hoạt động
+    addProvince: (name) => request('POST', '/admin/provinces', { name }),
+    deleteProvince: (id) => request('DELETE', `/admin/provinces/${id}`),
   }
 })()

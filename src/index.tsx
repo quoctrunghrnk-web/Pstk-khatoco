@@ -32,6 +32,15 @@ app.route('/api/admin', adminRoutes)
 // ── Health check ─────────────────────────────
 app.get('/api/health', (c) => c.json({ status: 'ok', time: new Date().toISOString() }))
 
+// ── Public: danh sách tỉnh/thành (không cần đăng nhập) ──────────────────
+// Dùng cho trang đăng ký nhân viên và hồ sơ
+app.get('/api/provinces', async (c) => {
+  const rows = await c.env.DB.prepare(
+    'SELECT id, name, sort_order FROM active_provinces ORDER BY sort_order, name'
+  ).all()
+  return c.json({ success: true, data: rows.results })
+})
+
 // Static files are served by Cloudflare Pages for /static/* and /index.html
 // The _routes.json excludes these from the Worker.
 // This catch-all handles any route not matched above (SPA fallback)
@@ -66,6 +75,7 @@ app.get('*', (c) => {
 <script src="/static/js/camera.js"></script>
 <script src="/static/js/geo.js"></script>
 <script src="/static/js/watermark.js"></script>
+<script src="/static/js/provinces.js"></script>
 <script src="/static/js/auth.js"></script>
 <script src="/static/js/register.js"></script>
 <script src="/static/js/profile.js"></script>

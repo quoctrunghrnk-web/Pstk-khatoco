@@ -5,6 +5,7 @@
 window.ProfileModule = (() => {
 
   let _profileData = null
+  let _activeProvinces = []  // cache danh sách tỉnh từ API
 
   async function loadProfile() {
     const res = await API.getProfile()
@@ -186,7 +187,8 @@ window.ProfileModule = (() => {
     }
   }
 
-  function showEditProvinceModal(data) {
+  async function showEditProvinceModal(data) {
+    // Luôn gọi API lấy danh sách mới nhất
     const { close } = Modal.create(`
       <div class="p-5">
         <h3 class="text-lg font-bold text-gray-800 mb-4">
@@ -194,10 +196,14 @@ window.ProfileModule = (() => {
         </h3>
         <div class="mb-4">
           <label class="block text-sm font-medium text-gray-700 mb-2">Tỉnh/Thành phố</label>
-          <select id="province-select"
-            class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500">
-            ${window.PROVINCES_OPTIONS ? window.PROVINCES_OPTIONS(data?.province || '') : ''}
-          </select>
+          <div class="relative">
+            <select id="province-select"
+              class="w-full pl-3 pr-8 py-2.5 border border-gray-300 rounded-xl text-sm
+                     outline-none focus:ring-2 focus:ring-indigo-500 appearance-none">
+              <option value="">Đang tải danh sách...</option>
+            </select>
+            <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
+          </div>
         </div>
         <p id="province-err" class="text-red-500 text-sm mb-3 hidden"></p>
         <div class="flex gap-3">
@@ -206,6 +212,27 @@ window.ProfileModule = (() => {
         </div>
       </div>
     `)
+
+    // Load danh sách tỉnh sau khi modal mở
+    try {
+      const res = await API.getActiveProvinces()
+      _activeProvinces = res.data || []
+    } catch {
+      _activeProvinces = []
+    }
+    const sel = document.getElementById('province-select')
+    if (sel) {
+      if (_activeProvinces.length === 0) {
+        sel.innerHTML = '<option value="">Chưa có tỉnh/thành nào — liên hệ admin</option>'
+      } else {
+        sel.innerHTML =
+          '<option value="">-- Chọn tỉnh/thành phố --</option>' +
+          _activeProvinces.map(p =>
+            `<option value="${p.name}" ${p.name === (data?.province || '') ? 'selected' : ''}>${p.name}</option>`
+          ).join('')
+      }
+    }
+
     document.getElementById('province-cancel').onclick = close
     document.getElementById('province-save').onclick = async () => {
       const province = document.getElementById('province-select').value
