@@ -28,6 +28,7 @@ window.API = (() => {
   return {
     // Auth
     login: (username, password) => request('POST', '/auth/login', { username, password }),
+    register: (data) => request('POST', '/auth/register', data),
     logout: () => request('POST', '/auth/logout'),
     me: () => request('GET', '/auth/me'),
     changePassword: (old_password, new_password) => request('POST', '/auth/change-password', { old_password, new_password }),
@@ -49,6 +50,7 @@ window.API = (() => {
     getUsers: () => request('GET', '/admin/users'),
     createUser: (data) => request('POST', '/admin/users', data),
     updateUser: (id, data) => request('PUT', `/admin/users/${id}`, data),
+    updateUserStatus: (id, account_status) => request('PATCH', `/admin/users/${id}/status`, { account_status }),
     deleteUser: (id) => request('DELETE', `/admin/users/${id}`),
     getUserProfile: (id) => request('GET', `/admin/users/${id}/profile`),
     resetPassword: (user_id, new_password) => request('POST', '/admin/reset-password', { user_id, new_password }),

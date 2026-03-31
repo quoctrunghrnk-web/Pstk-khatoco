@@ -67,6 +67,7 @@ app.get('*', (c) => {
 <script src="/static/js/geo.js"></script>
 <script src="/static/js/watermark.js"></script>
 <script src="/static/js/auth.js"></script>
+<script src="/static/js/register.js"></script>
 <script src="/static/js/profile.js"></script>
 <script src="/static/js/checkin.js"></script>
 <script src="/static/js/admin.js"></script>

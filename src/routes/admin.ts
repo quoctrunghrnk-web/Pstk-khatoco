@@ -27,11 +27,19 @@ admin.use('*', authMiddleware, adminMiddleware)
 // ── GET /api/admin/users ──────────────────────────────────────────────────
 admin.get('/users', async (c) => {
   const users = await c.env.DB.prepare(`
-    SELECT u.id, u.username, u.full_name, u.role, u.is_active, u.created_at,
+    SELECT u.id, u.username, u.full_name, u.role, u.is_active,
+           u.account_status, u.created_at,
            p.phone, p.cccd_number, p.bank_name, p.bank_account_number
     FROM users u
     LEFT JOIN profiles p ON p.user_id = u.id
-    ORDER BY u.created_at DESC
+    ORDER BY
+      CASE u.account_status
+        WHEN 'pending'  THEN 0
+        WHEN 'active'   THEN 1
+        WHEN 'resigned' THEN 2
+        ELSE 3
+      END,
+      u.created_at DESC
   `).all()
   return c.json(ok(users.results))
 })
@@ -75,18 +83,75 @@ admin.put('/users/:id', async (c) => {
   if (isNaN(id)) return c.json(err('ID không hợp lệ'), 400)
 
   const body = await c.req.json()
-  const { full_name, role, is_active } = body
+  const { full_name, role, is_active, account_status } = body
+
+  // Validate account_status nếu có
+  const validStatuses = ['pending', 'active', 'resigned']
+  if (account_status !== undefined && !validStatuses.includes(account_status)) {
+    return c.json(err('Trạng thái không hợp lệ'), 400)
+  }
+
+  // Không cho chuyển admin thành resigned
+  if (account_status === 'resigned') {
+    const target = await c.env.DB.prepare('SELECT role FROM users WHERE id = ?')
+      .bind(id).first<{ role: string }>()
+    if (target?.role === 'admin') {
+      return c.json(err('Không thể đặt trạng thái Đã nghỉ việc cho admin'), 400)
+    }
+  }
 
   await c.env.DB.prepare(`
     UPDATE users SET
-      full_name  = COALESCE(?, full_name),
-      role       = COALESCE(?, role),
-      is_active  = COALESCE(?, is_active),
-      updated_at = CURRENT_TIMESTAMP
+      full_name      = COALESCE(?, full_name),
+      role           = COALESCE(?, role),
+      is_active      = COALESCE(?, is_active),
+      account_status = COALESCE(?, account_status),
+      updated_at     = CURRENT_TIMESTAMP
     WHERE id = ?
-  `).bind(full_name ?? null, role ?? null, is_active ?? null, id).run()
+  `).bind(
+    full_name      ?? null,
+    role           ?? null,
+    is_active      ?? null,
+    account_status ?? null,
+    id
+  ).run()
 
   return c.json(ok(null, 'Cập nhật thành công'))
+})
+
+// ── PATCH /api/admin/users/:id/status ────────────────────────────────────
+// Chuyên dụng để thay đổi trạng thái tài khoản NV
+admin.patch('/users/:id/status', async (c) => {
+  const id = parseInt(c.req.param('id'))
+  if (isNaN(id)) return c.json(err('ID không hợp lệ'), 400)
+
+  const currentAdmin = c.get('user')
+  if (id === currentAdmin.id) return c.json(err('Không thể thay đổi trạng thái tài khoản của chính mình'), 400)
+
+  const { account_status } = await c.req.json()
+  const validStatuses = ['pending', 'active', 'resigned']
+  if (!account_status || !validStatuses.includes(account_status)) {
+    return c.json(err('Trạng thái không hợp lệ (pending | active | resigned)'), 400)
+  }
+
+  // Không cho resigned admin
+  const target = await c.env.DB.prepare('SELECT role, full_name FROM users WHERE id = ?')
+    .bind(id).first<{ role: string; full_name: string }>()
+  if (!target) return c.json(err('Không tìm thấy nhân viên'), 404)
+  if (target.role === 'admin' && account_status === 'resigned') {
+    return c.json(err('Không thể đặt Đã nghỉ việc cho tài khoản admin'), 400)
+  }
+
+  await c.env.DB.prepare(
+    'UPDATE users SET account_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+  ).bind(account_status, id).run()
+
+  const labels: Record<string, string> = {
+    active: 'Đang làm việc',
+    pending: 'Chờ kích hoạt',
+    resigned: 'Đã nghỉ việc',
+  }
+  return c.json(ok(null, `Đã chuyển trạng thái: ${labels[account_status]}`))
 })
 
 // ── DELETE /api/admin/users/:id ───────────────────────────────────────────

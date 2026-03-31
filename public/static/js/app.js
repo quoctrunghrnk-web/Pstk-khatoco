@@ -12,6 +12,12 @@ window.App = (() => {
       requireAuth: false,
       showNav: false,
     },
+    register: {
+      render: () => RegisterModule.renderPage(),
+      bind:   () => RegisterModule.bindEvents(),
+      requireAuth: false,
+      showNav: false,
+    },
     home: {
       render: () => CheckinModule.renderPage(),
       bind:   () => CheckinModule.bindEvents(),

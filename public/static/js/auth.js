@@ -87,7 +87,11 @@ window.Auth = (() => {
           </form>
           <p id="login-error" class="text-red-500 text-sm text-center mt-3 hidden"></p>
         </div>
-        <p class="text-center text-blue-200 text-xs mt-6">v${APP_CONFIG.VERSION}</p>
+        <p class="text-center text-blue-200 text-sm mt-5">
+          Chưa có tài khoản?
+          <button id="btn-go-register" class="text-white font-semibold underline ml-1">Đăng ký ngay</button>
+        </p>
+        <p class="text-center text-blue-200 text-xs mt-2">v${APP_CONFIG.VERSION}</p>
       </div>
     </div>
     `
@@ -97,6 +101,10 @@ window.Auth = (() => {
     const form = document.getElementById('login-form')
     const errEl = document.getElementById('login-error')
     const btn = document.getElementById('login-btn')
+
+    // Link sang trang đăng ký
+    const gotoRegister = document.getElementById('btn-go-register')
+    if (gotoRegister) gotoRegister.onclick = () => window.App.navigate('register')
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault()
