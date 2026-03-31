@@ -58,17 +58,22 @@ app.get('*', (c) => {
 </head>
 <body class="bg-gray-50 min-h-screen">
 <div id="app">
-  <div id="loading-screen" class="fixed inset-0 flex flex-col items-center justify-center bg-white z-50">
+  <div id="loading-screen" class="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-red-50 via-white to-orange-50 z-50">
     <div class="text-center flex-1 flex flex-col items-center justify-center px-8">
-      <!-- Logo trên nền trắng, viền nhẹ để tương phản -->
-      <div class="bg-white rounded-3xl shadow-xl border border-gray-100 p-5 mb-6">
-        <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt Logo"
-          class="w-20 h-20 object-contain" />
+      <!-- Logo card nổi bật -->
+      <div class="relative mb-6">
+        <div class="w-24 h-24 bg-white rounded-3xl shadow-2xl border border-red-100 flex items-center justify-center">
+          <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt Logo"
+            class="w-16 h-16 object-contain" />
+        </div>
+        <!-- Dot decorations -->
+        <div class="absolute -top-1 -right-1 w-4 h-4 bg-red-400 rounded-full opacity-60"></div>
+        <div class="absolute -bottom-1 -left-1 w-3 h-3 bg-orange-400 rounded-full opacity-50"></div>
       </div>
       <!-- Accent bar -->
-      <div class="w-16 h-1 bg-gradient-to-r from-red-500 to-orange-400 rounded-full mb-5"></div>
-      <h1 class="text-xl font-bold text-gray-800 mb-1.5">Nhân Viên Thị Trường</h1>
-      <p class="text-gray-400 text-sm">Đang tải...</p>
+      <div class="w-20 h-1.5 bg-gradient-to-r from-red-500 to-orange-400 rounded-full mb-5"></div>
+      <h1 class="text-xl font-bold text-gray-800 mb-1.5 tracking-tight">Nhân Viên Thị Trường</h1>
+      <p class="text-gray-400 text-sm">Đang tải<span class="animate-pulse">...</span></p>
     </div>
     <div class="text-center pb-6 text-xs space-y-0.5">
       <p class="text-gray-400">Phát triển bởi <a href="https://nhankiet.vn" class="text-red-500 font-semibold">nhankiet.vn</a></p>

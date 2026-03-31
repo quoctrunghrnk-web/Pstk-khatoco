@@ -30,33 +30,31 @@ window.CheckinModule = (() => {
   // ── renderPage ──────────────────────────────
   function renderPage() {
     return `
-    <div class="pb-28 bg-gray-50 min-h-screen">
+    <div class="pb-28 bg-gradient-to-b from-green-50 to-gray-50 min-h-screen">
       <!-- Header cân đối, logo nổi bật -->
       <div class="bg-white border-b border-gray-100 shadow-sm px-4 pt-safe-top sticky top-0 z-40">
         <div class="max-w-lg mx-auto flex items-center gap-3 h-14">
-          <!-- Logo nền xanh lá nhạt để logo đỏ nổi bật -->
           <div class="w-10 h-10 bg-green-50 border-2 border-green-100 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
             <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="NK"
               class="w-8 h-8 object-contain block" />
           </div>
-          <!-- Title -->
           <div class="flex-1 min-w-0">
             <h2 class="text-sm font-bold text-gray-800 leading-tight">Check-in / Check-out</h2>
-            <p class="text-green-600 text-xs" id="ci-date-display">Đang tải...</p>
+            <p class="text-green-600 text-xs font-medium" id="ci-date-display">Đang tải...</p>
           </div>
-          <!-- Live time -->
-          <span id="ci-live-time" class="text-gray-600 text-sm font-mono flex-shrink-0 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100"></span>
+          <span id="ci-live-time" class="text-green-700 text-sm font-bold flex-shrink-0 bg-green-50 px-2.5 py-1 rounded-lg border border-green-100"></span>
         </div>
       </div>
-      <!-- Green accent bar -->
       <div class="h-1 bg-gradient-to-r from-green-500 to-emerald-400"></div>
 
       <div class="px-4 mt-4 space-y-3 max-w-lg mx-auto">
 
         <!-- ── Card trạng thái hôm nay ── -->
-        <div class="bg-white rounded-2xl shadow-lg p-4">
+        <div class="bg-white rounded-2xl shadow-md border border-green-50 p-4">
           <div class="flex items-center justify-between mb-3">
-            <h3 class="font-semibold text-gray-800">Hôm nay</h3>
+            <h3 class="font-bold text-gray-800 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span>Hôm nay
+            </h3>
             <span id="ci-status-badge">
               <i class="fas fa-spinner fa-spin text-gray-300"></i>
             </span>
@@ -64,15 +62,15 @@ window.CheckinModule = (() => {
 
           <!-- Giờ check-in / check-out -->
           <div class="grid grid-cols-2 gap-3 mb-3">
-            <div class="bg-blue-50 rounded-xl p-3 text-center">
-              <p class="text-xs text-blue-500 mb-1">
+            <div class="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-3 text-center border border-blue-100">
+              <p class="text-xs text-blue-500 font-semibold mb-1 uppercase tracking-wide">
                 <i class="fas fa-sign-in-alt mr-1"></i>Check-in
               </p>
               <p id="ci-time-in" class="text-2xl font-bold text-blue-700">--:--</p>
               <p id="ci-addr-in" class="text-xs text-blue-400 mt-1 line-clamp-2">--</p>
             </div>
-            <div class="bg-purple-50 rounded-xl p-3 text-center">
-              <p class="text-xs text-purple-500 mb-1">
+            <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-3 text-center border border-purple-100">
+              <p class="text-xs text-purple-500 font-semibold mb-1 uppercase tracking-wide">
                 <i class="fas fa-sign-out-alt mr-1"></i>Check-out
               </p>
               <p id="ci-time-out" class="text-2xl font-bold text-purple-700">--:--</p>
@@ -83,75 +81,78 @@ window.CheckinModule = (() => {
           <!-- Nút hành động -->
           <div id="ci-actions">
             <div class="flex items-center justify-center h-14">
-              <i class="fas fa-spinner fa-spin text-gray-300 text-2xl"></i>
+              <i class="fas fa-spinner fa-spin text-green-300 text-2xl"></i>
             </div>
           </div>
         </div>
 
         <!-- ── Card: Số lượng bán & ghi chú ── -->
-        <div id="ci-sales-card" class="hidden bg-white rounded-2xl shadow p-4">
-          <h3 class="font-semibold text-gray-800 mb-3">
-            <i class="fas fa-clipboard-list mr-2 text-green-500"></i>Kết quả bán hàng
+        <div id="ci-sales-card" class="hidden bg-white rounded-2xl shadow-md border border-emerald-50 p-4">
+          <h3 class="font-bold text-emerald-800 mb-3 flex items-center gap-2">
+            <span class="w-7 h-7 bg-emerald-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-clipboard-list text-emerald-600 text-xs"></i>
+            </span>Kết quả bán hàng
           </h3>
 
-          <!-- Form nhập khi đang check-in -->
           <div id="ci-sales-inputs" class="space-y-3">
             <div>
-              <label class="block text-sm font-medium text-gray-600 mb-1">
-                <i class="fas fa-box mr-1 text-gray-400"></i>Số lượng bán được
+              <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+                <i class="fas fa-box mr-1 text-emerald-500"></i>Số lượng bán được
               </label>
               <input type="number" id="ci-sales-qty-input" min="0" value="0"
-                class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm outline-none
-                       focus:ring-2 focus:ring-green-500 bg-gray-50" />
+                class="w-full px-3 py-2.5 border border-emerald-200 rounded-xl text-sm outline-none
+                       focus:ring-2 focus:ring-emerald-400 bg-emerald-50/30" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-600 mb-1">
-                <i class="fas fa-sticky-note mr-1 text-gray-400"></i>Ghi chú
+              <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+                <i class="fas fa-sticky-note mr-1 text-amber-500"></i>Ghi chú
               </label>
               <textarea id="ci-notes-input" rows="2"
                 placeholder="Nhập ghi chú (không bắt buộc)..."
                 class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm outline-none
-                       focus:ring-2 focus:ring-green-500 bg-gray-50 resize-none"></textarea>
+                       focus:ring-2 focus:ring-amber-400 bg-amber-50/20 resize-none"></textarea>
             </div>
           </div>
 
-          <!-- Hiển thị readonly sau checkout -->
           <div id="ci-sales-readonly" class="hidden space-y-2">
-            <div class="flex items-center gap-2 bg-green-50 rounded-xl px-3 py-2">
-              <i class="fas fa-box text-green-500"></i>
-              <span class="text-sm text-gray-600">Số lượng bán:</span>
-              <span id="ci-sales-qty-display" class="font-bold text-green-700 ml-auto">0</span>
+            <div class="flex items-center gap-2 bg-emerald-50 rounded-xl px-3 py-2 border border-emerald-100">
+              <i class="fas fa-box text-emerald-500"></i>
+              <span class="text-sm text-emerald-700 font-medium">Số lượng bán:</span>
+              <span id="ci-sales-qty-display" class="font-bold text-emerald-800 ml-auto">0</span>
             </div>
             <div id="ci-notes-readonly-row" class="hidden">
-              <div class="flex items-start gap-2 bg-gray-50 rounded-xl px-3 py-2">
-                <i class="fas fa-sticky-note text-gray-400 mt-0.5 flex-shrink-0"></i>
-                <span id="ci-notes-display" class="text-sm text-gray-600 break-words"></span>
+              <div class="flex items-start gap-2 bg-amber-50 rounded-xl px-3 py-2 border border-amber-100">
+                <i class="fas fa-sticky-note text-amber-500 mt-0.5 flex-shrink-0"></i>
+                <span id="ci-notes-display" class="text-sm text-amber-800 break-words"></span>
               </div>
             </div>
           </div>
         </div>
 
         <!-- ── Card: Ảnh hoạt động bán hàng ── -->
-        <div id="ci-activity-section" class="hidden bg-white rounded-2xl shadow p-4">
+        <div id="ci-activity-section" class="hidden bg-white rounded-2xl shadow-md border border-orange-50 p-4">
           <div class="flex items-center justify-between mb-3">
-            <h3 class="font-semibold text-gray-800 text-sm">
-              <i class="fas fa-images mr-1.5 text-orange-500"></i>Ảnh hoạt động
+            <h3 class="font-bold text-orange-800 text-sm flex items-center gap-2">
+              <span class="w-7 h-7 bg-orange-100 rounded-lg flex items-center justify-center">
+                <i class="fas fa-images text-orange-500 text-xs"></i>
+              </span>Ảnh hoạt động
             </h3>
-            <span id="ci-activity-label" class="text-xs text-gray-400 bg-orange-50 px-2 py-0.5 rounded-full">Tối đa 4 ảnh</span>
+            <span id="ci-activity-label" class="text-xs text-orange-600 font-medium bg-orange-50 border border-orange-100 px-2 py-0.5 rounded-full">Tối đa 4 ảnh</span>
           </div>
-          <!-- Grid ảnh 2 cột, kích thước vừa phải -->
           <div id="activity-photo-grid" class="grid grid-cols-2 gap-2 mb-3"></div>
           <button id="btn-save-activity"
-            class="w-full py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl
-                   text-sm font-medium hidden">
+            class="w-full py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700
+                   text-white rounded-xl text-sm font-semibold hidden shadow-sm">
             <i class="fas fa-save mr-1"></i>Lưu ảnh hoạt động
           </button>
         </div>
 
         <!-- ── Lịch sử ── -->
-        <div class="bg-white rounded-2xl shadow p-4">
-          <h3 class="font-semibold text-gray-800 mb-3 text-sm">
-            <i class="fas fa-history mr-1.5 text-gray-400"></i>Lịch sử gần đây
+        <div class="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
+          <h3 class="font-bold text-gray-700 mb-3 text-sm flex items-center gap-2">
+            <span class="w-7 h-7 bg-gray-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-history text-gray-500 text-xs"></i>
+            </span>Lịch sử gần đây
           </h3>
           <div id="ci-history-list" class="space-y-2">
             <p class="text-center text-gray-300 text-sm py-4">
@@ -160,7 +161,6 @@ window.CheckinModule = (() => {
           </div>
         </div>
 
-        <!-- Spacer bottom nav -->
         <div class="h-2"></div>
       </div>
     </div>

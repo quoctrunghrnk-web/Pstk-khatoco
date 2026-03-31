@@ -123,17 +123,19 @@ window.App = (() => {
     <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-2xl z-50 safe-area-bottom">
       <div class="flex items-stretch max-w-lg mx-auto">
         ${navItems.map(item => `
-          <button class="nav-btn flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-colors relative
-            ${activePage === item.page ? 'text-red-600' : 'text-gray-400 hover:text-gray-600'}"
+          <button class="nav-btn flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 transition-all relative
+            ${activePage === item.page
+              ? 'text-red-600 bg-red-50'
+              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}"
             data-page="${item.page}">
-            ${activePage === item.page ? '<span class="absolute top-0 left-1/4 right-1/4 h-0.5 bg-red-500 rounded-b-full"></span>' : ''}
-            <i class="fas ${item.icon} text-lg"></i>
-            <span class="text-xs font-medium">${item.label}</span>
+            ${activePage === item.page ? '<span class="absolute top-0 inset-x-3 h-0.5 bg-gradient-to-r from-red-500 to-orange-400 rounded-b-full"></span>' : ''}
+            <i class="fas ${item.icon} text-base ${activePage === item.page ? 'text-red-500' : ''}"></i>
+            <span class="text-[11px] font-semibold">${item.label}</span>
           </button>
         `).join('')}
       </div>
-      <div class="text-center py-1 border-t border-gray-50">
-        <p class="text-gray-400 text-[10px] leading-tight">Phát triển bởi <a href="https://nhankiet.vn" class="text-red-500 font-semibold">nhankiet.vn</a> &nbsp;·&nbsp; © 2026 Nhân Kiệt. All rights reserved.</p>
+      <div class="text-center py-1 border-t border-red-50 bg-red-50/40">
+        <p class="text-red-300 text-[10px] leading-tight">Phát triển bởi <a href="https://nhankiet.vn" class="text-red-500 font-bold">nhankiet.vn</a> &nbsp;·&nbsp; © 2026 Nhân Kiệt. All rights reserved.</p>
       </div>
     </nav>`
   }

@@ -16,118 +16,115 @@ window.ProfileModule = (() => {
   function renderPage() {
     const user = Auth.getUser()
     return `
-    <div class="pb-24 bg-gray-50 min-h-screen">
-      <!-- Header trắng cân đối -->
+    <div class="pb-24 bg-gradient-to-b from-blue-50 to-gray-50 min-h-screen">
+      <!-- Header -->
       <div class="bg-white border-b border-gray-100 shadow-sm px-4 sticky top-0 z-40 pt-safe-top">
         <div class="max-w-lg mx-auto flex items-center gap-3 h-14">
-          <!-- Logo nền xanh dương nhạt -->
           <div class="w-10 h-10 bg-blue-50 border-2 border-blue-100 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
             <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="NK"
               class="w-8 h-8 object-contain block" />
           </div>
-          <!-- Info -->
           <div class="flex-1 min-w-0">
             <h2 class="text-sm font-bold text-gray-800 truncate">${user?.full_name || 'Nhân viên'}</h2>
-            <p class="text-gray-400 text-xs">@${user?.username} &nbsp;·&nbsp; <span class="text-blue-500">${user?.role === 'admin' ? 'Quản trị viên' : 'Nhân viên'}</span></p>
+            <p class="text-gray-400 text-xs">@${user?.username} &nbsp;·&nbsp; <span class="text-blue-600 font-semibold">${user?.role === 'admin' ? 'Quản trị viên' : 'Nhân viên'}</span></p>
           </div>
         </div>
       </div>
-      <!-- Blue accent bar -->
       <div class="h-1 bg-gradient-to-r from-blue-500 to-indigo-400"></div>
 
       <!-- Content cards -->
       <div class="px-4 mt-4 space-y-3 max-w-lg mx-auto">
 
-        <!-- Loading skeleton -->
         <div id="profile-loading" class="bg-white rounded-2xl p-4 shadow flex items-center justify-center h-32">
           <i class="fas fa-spinner fa-spin text-blue-500 text-2xl"></i>
         </div>
 
-        <!-- Profile content (hidden until loaded) -->
-        <div id="profile-content" class="hidden space-y-4">
+        <div id="profile-content" class="hidden space-y-3">
 
-          <!-- CCCD -->
-          <!-- Tỉnh/thành làm việc -->
-          <div id="province-card" class="bg-white rounded-2xl shadow overflow-hidden">
-            <div class="bg-indigo-50 px-4 py-3 flex items-center justify-between">
-              <h3 class="font-semibold text-indigo-800 flex items-center gap-2">
+          <!-- Khu vực làm việc -->
+          <div id="province-card" class="bg-white rounded-2xl shadow-md border border-indigo-50 overflow-hidden">
+            <div class="bg-gradient-to-r from-indigo-500 to-blue-500 px-4 py-3 flex items-center justify-between">
+              <h3 class="font-bold text-white flex items-center gap-2 text-sm">
                 <i class="fas fa-map-marker-alt"></i> Khu vực làm việc
               </h3>
-              <button id="btn-edit-province" class="text-indigo-600 text-sm font-medium">
-                <i class="fas fa-edit"></i> Sửa
+              <button id="btn-edit-province" class="text-white/80 hover:text-white text-xs font-medium bg-white/20 hover:bg-white/30 px-2 py-1 rounded-lg transition-colors">
+                <i class="fas fa-edit mr-1"></i>Sửa
               </button>
             </div>
             <div id="province-info" class="p-4"></div>
           </div>
 
-          <div class="bg-white rounded-2xl shadow overflow-hidden">
-            <div class="bg-blue-50 px-4 py-3 flex items-center justify-between">
-              <h3 class="font-semibold text-blue-800 flex items-center gap-2">
+          <!-- CCCD -->
+          <div class="bg-white rounded-2xl shadow-md border border-blue-50 overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-500 to-cyan-500 px-4 py-3 flex items-center justify-between">
+              <h3 class="font-bold text-white flex items-center gap-2 text-sm">
                 <i class="fas fa-id-card"></i> Thông tin CCCD
               </h3>
-              <button id="btn-edit-cccd" class="text-blue-600 text-sm font-medium">
-                <i class="fas fa-edit"></i> Sửa
+              <button id="btn-edit-cccd" class="text-white/80 hover:text-white text-xs font-medium bg-white/20 hover:bg-white/30 px-2 py-1 rounded-lg transition-colors">
+                <i class="fas fa-edit mr-1"></i>Sửa
               </button>
             </div>
             <div id="cccd-info" class="p-4 space-y-2"></div>
 
             <!-- Ảnh CCCD -->
             <div class="px-4 pb-4">
-              <p class="text-sm font-medium text-gray-600 mb-2">Ảnh CCCD</p>
+              <p class="text-sm font-semibold text-blue-700 mb-2 flex items-center gap-1.5">
+                <i class="fas fa-camera text-blue-400"></i>Ảnh CCCD
+              </p>
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <p class="text-xs text-gray-500 mb-1 text-center">Mặt trước</p>
-                  <div id="cccd-front-preview" class="aspect-[1.6] bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center cursor-pointer border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors">
-                    <div class="text-center text-gray-400">
+                  <p class="text-xs text-blue-500 font-medium mb-1 text-center">Mặt trước</p>
+                  <div id="cccd-front-preview" class="aspect-[1.6] bg-blue-50 rounded-xl overflow-hidden flex items-center justify-center cursor-pointer border-2 border-dashed border-blue-200 hover:border-blue-400 transition-colors">
+                    <div class="text-center text-blue-300">
                       <i class="fas fa-camera text-xl mb-1"></i>
                       <p class="text-xs">Chụp/Chọn ảnh</p>
                     </div>
                   </div>
                 </div>
                 <div>
-                  <p class="text-xs text-gray-500 mb-1 text-center">Mặt sau</p>
-                  <div id="cccd-back-preview" class="aspect-[1.6] bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center cursor-pointer border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors">
-                    <div class="text-center text-gray-400">
+                  <p class="text-xs text-blue-500 font-medium mb-1 text-center">Mặt sau</p>
+                  <div id="cccd-back-preview" class="aspect-[1.6] bg-blue-50 rounded-xl overflow-hidden flex items-center justify-center cursor-pointer border-2 border-dashed border-blue-200 hover:border-blue-400 transition-colors">
+                    <div class="text-center text-blue-300">
                       <i class="fas fa-camera text-xl mb-1"></i>
                       <p class="text-xs">Chụp/Chọn ảnh</p>
                     </div>
                   </div>
                 </div>
               </div>
-              <button id="btn-upload-cccd" class="w-full mt-3 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hidden">
+              <button id="btn-upload-cccd" class="w-full mt-3 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl text-sm font-semibold hidden shadow-sm">
                 <i class="fas fa-upload mr-1"></i> Lưu ảnh CCCD
               </button>
             </div>
           </div>
 
           <!-- Ngân hàng -->
-          <div class="bg-white rounded-2xl shadow overflow-hidden">
-            <div class="bg-green-50 px-4 py-3 flex items-center justify-between">
-              <h3 class="font-semibold text-green-800 flex items-center gap-2">
+          <div class="bg-white rounded-2xl shadow-md border border-emerald-50 overflow-hidden">
+            <div class="bg-gradient-to-r from-emerald-500 to-green-500 px-4 py-3 flex items-center justify-between">
+              <h3 class="font-bold text-white flex items-center gap-2 text-sm">
                 <i class="fas fa-university"></i> Thông tin ngân hàng
               </h3>
-              <button id="btn-edit-bank" class="text-green-600 text-sm font-medium">
-                <i class="fas fa-edit"></i> Sửa
+              <button id="btn-edit-bank" class="text-white/80 hover:text-white text-xs font-medium bg-white/20 hover:bg-white/30 px-2 py-1 rounded-lg transition-colors">
+                <i class="fas fa-edit mr-1"></i>Sửa
               </button>
             </div>
             <div id="bank-info" class="p-4 space-y-2"></div>
           </div>
 
           <!-- Bảo mật -->
-          <div class="bg-white rounded-2xl shadow overflow-hidden">
-            <div class="px-4 py-3 bg-gray-50">
-              <h3 class="font-semibold text-gray-800 flex items-center gap-2">
-                <i class="fas fa-shield-alt"></i> Bảo mật
+          <div class="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+            <div class="bg-gradient-to-r from-gray-600 to-gray-700 px-4 py-3">
+              <h3 class="font-bold text-white flex items-center gap-2 text-sm">
+                <i class="fas fa-shield-alt"></i> Bảo mật tài khoản
               </h3>
             </div>
-            <div class="p-4 space-y-3">
-              <button id="btn-change-password" class="w-full flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                <span class="text-sm font-medium text-gray-700"><i class="fas fa-key mr-2 text-gray-500"></i>Đổi mật khẩu</span>
-                <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
+            <div class="p-4 space-y-2.5">
+              <button id="btn-change-password" class="w-full flex items-center justify-between p-3 bg-amber-50 border border-amber-100 rounded-xl hover:bg-amber-100 transition-colors">
+                <span class="text-sm font-semibold text-amber-700"><i class="fas fa-key mr-2 text-amber-500"></i>Đổi mật khẩu</span>
+                <i class="fas fa-chevron-right text-amber-400 text-xs"></i>
               </button>
-              <button id="btn-logout" class="w-full flex items-center justify-between p-3 bg-red-50 rounded-xl hover:bg-red-100 transition-colors">
-                <span class="text-sm font-medium text-red-600"><i class="fas fa-sign-out-alt mr-2"></i>Đăng xuất</span>
-                <i class="fas fa-chevron-right text-red-300 text-xs"></i>
+              <button id="btn-logout" class="w-full flex items-center justify-between p-3 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 transition-colors">
+                <span class="text-sm font-semibold text-red-600"><i class="fas fa-sign-out-alt mr-2"></i>Đăng xuất</span>
+                <i class="fas fa-chevron-right text-red-400 text-xs"></i>
               </button>
             </div>
           </div>
@@ -139,9 +136,9 @@ window.ProfileModule = (() => {
 
   function renderInfoRow(label, value) {
     return `
-    <div class="flex items-start gap-2 py-1.5 border-b border-gray-50 last:border-0">
-      <span class="text-gray-500 text-sm w-32 flex-shrink-0">${label}</span>
-      <span class="text-gray-800 text-sm font-medium flex-1 break-all">${value || '<span class="text-gray-300">Chưa cập nhật</span>'}</span>
+    <div class="flex items-start gap-2 py-1.5 border-b border-blue-50 last:border-0">
+      <span class="text-blue-400 text-xs font-semibold uppercase tracking-wide w-28 flex-shrink-0 mt-0.5">${label}</span>
+      <span class="text-gray-800 text-sm font-medium flex-1 break-all">${value || '<span class="text-gray-300 italic text-xs">Chưa cập nhật</span>'}</span>
     </div>`
   }
 
@@ -152,11 +149,13 @@ window.ProfileModule = (() => {
     const provinceEl = document.getElementById('province-info')
     if (provinceEl) {
       provinceEl.innerHTML = data.province
-        ? `<div class="flex items-center gap-2">
-             <i class="fas fa-map-marker-alt text-indigo-500"></i>
-             <span class="text-gray-800 font-medium">${data.province}</span>
+        ? `<div class="flex items-center gap-3 bg-indigo-50 rounded-xl px-3 py-2.5 border border-indigo-100">
+             <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center flex-shrink-0">
+               <i class="fas fa-map-marker-alt text-white text-sm"></i>
+             </div>
+             <span class="text-indigo-800 font-bold text-sm">${data.province}</span>
            </div>`
-        : `<p class="text-gray-400 text-sm italic">Chưa cập nhật tỉnh/thành phố</p>`
+        : `<p class="text-gray-400 text-sm italic text-center py-2">Chưa cập nhật tỉnh/thành phố</p>`
     }
 
     // CCCD info

@@ -53,47 +53,43 @@ window.AdminModule = (() => {
   // ── renderPage ────────────────────────────────
   function renderPage() {
     return `
-    <div class="pb-24 bg-gray-50 min-h-screen">
-      <!-- Header trắng cân đối, logo nổi bật -->
+    <div class="pb-24 bg-gradient-to-b from-red-50 to-gray-50 min-h-screen">
+      <!-- Header -->
       <div class="bg-white border-b border-gray-100 shadow-sm px-4 sticky top-0 z-40 pt-safe-top">
         <div class="max-w-2xl mx-auto flex items-center gap-3 h-14">
-          <!-- Logo nền đỏ nhạt, logo đỏ nổi bật -->
           <div class="w-10 h-10 bg-red-50 border-2 border-red-100 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
             <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="NK"
               class="w-8 h-8 object-contain block" />
           </div>
-          <!-- Title -->
           <div class="flex-1 min-w-0">
             <h2 class="text-sm font-bold text-gray-800">Quản trị viên</h2>
-            <p class="text-gray-400 text-xs">Nhân Kiệt &nbsp;·&nbsp; <span class="text-red-500">Quản lý nhân viên &amp; hoạt động</span></p>
+            <p class="text-gray-400 text-xs">Nhân Kiệt &nbsp;·&nbsp; <span class="text-red-500 font-semibold">Quản lý nhân viên &amp; hoạt động</span></p>
           </div>
-          <!-- Actions -->
           <div class="flex items-center gap-1.5 flex-shrink-0">
             <button id="btn-admin-change-pw"
-              class="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200" title="Đổi mật khẩu">
+              class="w-8 h-8 flex items-center justify-center text-amber-600 hover:bg-amber-50 rounded-lg transition-colors border border-amber-200" title="Đổi mật khẩu">
               <i class="fas fa-key text-xs"></i>
             </button>
             <button id="btn-admin-logout"
-              class="flex items-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-medium transition-colors border border-red-200">
+              class="flex items-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-semibold transition-colors border border-red-200">
               <i class="fas fa-sign-out-alt text-xs"></i>
               <span>Thoát</span>
             </button>
           </div>
         </div>
       </div>
-      <!-- Red accent bar -->
       <div class="h-1 bg-gradient-to-r from-red-600 to-orange-400"></div>
 
-      <!-- Tabs (3 tab) -->
+      <!-- Tabs -->
       <div class="px-4 mt-4 mb-4 max-w-2xl mx-auto">
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 flex overflow-hidden">
-          <button class="admin-tab flex-1 py-2.5 text-sm font-semibold transition-colors bg-red-600 text-white" data-tab="staff">
+        <div class="bg-white rounded-2xl shadow-md border border-red-50 flex overflow-hidden">
+          <button class="admin-tab flex-1 py-2.5 text-sm font-bold transition-all bg-gradient-to-b from-red-600 to-red-700 text-white" data-tab="staff">
             <i class="fas fa-users mr-1"></i>Nhân viên
           </button>
-          <button class="admin-tab flex-1 py-2.5 text-sm font-medium transition-colors text-gray-500 hover:bg-gray-50" data-tab="provinces">
+          <button class="admin-tab flex-1 py-2.5 text-sm font-medium transition-all text-indigo-600 hover:bg-indigo-50" data-tab="provinces">
             <i class="fas fa-map-marker-alt mr-1"></i>Tỉnh/Thành
           </button>
-          <button class="admin-tab flex-1 py-2.5 text-sm font-medium transition-colors text-gray-500 hover:bg-gray-50" data-tab="reports">
+          <button class="admin-tab flex-1 py-2.5 text-sm font-medium transition-all text-emerald-600 hover:bg-emerald-50" data-tab="reports">
             <i class="fas fa-chart-bar mr-1"></i>Báo cáo
           </button>
         </div>
@@ -102,30 +98,31 @@ window.AdminModule = (() => {
       <!-- ═══ Tab: Nhân viên ═══ -->
       <div id="admin-tab-staff" class="px-4 space-y-3">
         <div class="flex items-center justify-between">
-          <h3 class="font-semibold text-gray-800">Danh sách nhân viên</h3>
-          <button id="btn-add-user" class="flex items-center gap-1 px-3 py-2 bg-red-600 text-white text-sm rounded-xl">
-            <i class="fas fa-plus"></i> Thêm
+          <h3 class="font-bold text-gray-800 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>Danh sách nhân viên
+          </h3>
+          <button id="btn-add-user" class="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm rounded-xl shadow-sm hover:from-red-700 hover:to-red-800 transition-all font-semibold">
+            <i class="fas fa-plus text-xs"></i>Thêm
           </button>
         </div>
 
-        <!-- Filter tỉnh nhân viên -->
-        <div class="bg-white rounded-2xl shadow p-3">
+        <div class="bg-white rounded-2xl shadow-md border border-red-50 p-3">
           <div class="flex gap-2 items-end">
             <div class="flex-1">
-              <label class="block text-xs text-gray-500 mb-1">
-                <i class="fas fa-map-marker-alt mr-1 text-red-400"></i>Lọc theo tỉnh/thành
+              <label class="block text-xs font-semibold text-red-600 mb-1.5">
+                <i class="fas fa-map-marker-alt mr-1"></i>Lọc theo tỉnh/thành
               </label>
               <div class="relative">
                 <select id="staff-province-filter"
-                  class="w-full pl-3 pr-8 py-2 border border-gray-300 rounded-xl text-sm
-                         bg-white focus:outline-none focus:ring-2 focus:ring-red-400
-                         appearance-none cursor-pointer">
+                  class="w-full pl-3 pr-8 py-2 border border-red-100 rounded-xl text-sm
+                         bg-red-50/30 focus:outline-none focus:ring-2 focus:ring-red-400
+                         appearance-none cursor-pointer text-gray-700">
                   <option value="">Tất cả tỉnh/thành</option>
                 </select>
-                <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
+                <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-red-400 text-xs pointer-events-none"></i>
               </div>
             </div>
-            <button id="btn-filter-staff" class="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-medium">
+            <button id="btn-filter-staff" class="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-semibold shadow-sm">
               <i class="fas fa-filter"></i>
             </button>
           </div>
@@ -140,11 +137,13 @@ window.AdminModule = (() => {
       <div id="admin-tab-provinces" class="px-4 space-y-3 hidden">
         <div class="flex items-center justify-between">
           <div>
-            <h3 class="font-semibold text-gray-800">Tỉnh/Thành hoạt động</h3>
-            <p class="text-xs text-gray-400 mt-0.5">Nhân viên tự chọn tỉnh khi đăng ký và trong hồ sơ</p>
+            <h3 class="font-bold text-gray-800 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-indigo-500 inline-block"></span>Tỉnh/Thành hoạt động
+            </h3>
+            <p class="text-xs text-gray-400 mt-0.5 ml-4">Nhân viên tự chọn tỉnh khi đăng ký và trong hồ sơ</p>
           </div>
-          <button id="btn-add-province" class="flex items-center gap-1 px-3 py-2 bg-indigo-600 text-white text-sm rounded-xl">
-            <i class="fas fa-plus"></i> Thêm
+          <button id="btn-add-province" class="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white text-sm rounded-xl shadow-sm hover:from-indigo-700 hover:to-indigo-800 transition-all font-semibold">
+            <i class="fas fa-plus text-xs"></i>Thêm
           </button>
         </div>
         <div id="provinces-list">
@@ -154,24 +153,28 @@ window.AdminModule = (() => {
 
       <!-- ═══ Tab: Báo cáo ═══ -->
       <div id="admin-tab-reports" class="px-4 space-y-3 hidden">
-        <div class="bg-white rounded-2xl shadow p-4">
-          <h4 class="text-sm font-semibold text-gray-700 mb-3">
-            <i class="fas fa-filter mr-1 text-red-500"></i>Bộ lọc báo cáo
+        <div class="bg-white rounded-2xl shadow-md border border-emerald-50 p-4">
+          <h4 class="text-sm font-bold text-emerald-700 mb-3 flex items-center gap-2">
+            <span class="w-6 h-6 bg-emerald-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-filter text-emerald-600 text-xs"></i>
+            </span>Bộ lọc báo cáo
           </h4>
-          <div class="space-y-2">
+          <div class="space-y-2.5">
             <div>
-              <label class="block text-xs text-gray-500 mb-1">Ngày báo cáo</label>
+              <label class="block text-xs font-semibold text-gray-600 mb-1.5">
+                <i class="fas fa-calendar-alt mr-1 text-emerald-500"></i>Ngày báo cáo
+              </label>
               <input type="date" id="report-date"
-                class="w-full px-3 py-2 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500" />
+                class="w-full px-3 py-2 border border-emerald-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-400 bg-emerald-50/30" />
             </div>
             <div>
-              <label class="block text-xs text-gray-500 mb-1">
+              <label class="block text-xs font-semibold text-gray-600 mb-1.5">
                 <i class="fas fa-map-marker-alt mr-1 text-red-400"></i>Tỉnh/Thành phố
               </label>
               <div class="relative">
                 <select id="report-province-filter"
-                  class="w-full pl-3 pr-8 py-2 border border-gray-300 rounded-xl text-sm
-                         bg-white focus:outline-none focus:ring-2 focus:ring-red-400
+                  class="w-full pl-3 pr-8 py-2 border border-gray-200 rounded-xl text-sm
+                         bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400
                          appearance-none cursor-pointer">
                   <option value="">Tất cả tỉnh/thành</option>
                 </select>
@@ -179,10 +182,10 @@ window.AdminModule = (() => {
               </div>
             </div>
             <div class="flex gap-2 pt-1">
-              <button id="btn-load-report" class="flex-1 py-2 bg-red-600 text-white rounded-xl text-sm font-medium">
+              <button id="btn-load-report" class="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl text-sm font-semibold shadow-sm">
                 <i class="fas fa-search mr-1"></i>Xem báo cáo
               </button>
-              <button id="btn-export-pdf" class="flex-1 py-2 bg-green-600 text-white rounded-xl text-sm font-medium" disabled>
+              <button id="btn-export-pdf" class="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold shadow-sm" disabled>
                 <i class="fas fa-file-pdf mr-1"></i>Xuất PDF
               </button>
             </div>
@@ -190,25 +193,30 @@ window.AdminModule = (() => {
         </div>
 
         <!-- Summary -->
-        <div id="report-summary" class="hidden bg-white rounded-2xl shadow p-4">
-          <div class="grid grid-cols-3 gap-2 text-center text-sm">
-            <div class="bg-blue-50 rounded-xl p-2">
-              <p class="text-xs text-blue-500 mb-0.5">NV chấm công</p>
-              <p id="sum-staff" class="font-bold text-blue-700 text-lg">-</p>
+        <div id="report-summary" class="hidden bg-white rounded-2xl shadow-md border border-gray-100 p-4">
+          <div class="grid grid-cols-3 gap-2.5 text-center">
+            <div class="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-3 border border-blue-100">
+              <p class="text-xs text-blue-500 font-semibold mb-1 uppercase tracking-wide">NV chấm công</p>
+              <p id="sum-staff" class="font-bold text-blue-700 text-xl">-</p>
             </div>
-            <div class="bg-green-50 rounded-xl p-2">
-              <p class="text-xs text-green-500 mb-0.5">Hoàn thành</p>
-              <p id="sum-done" class="font-bold text-green-700 text-lg">-</p>
+            <div class="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-3 border border-emerald-100">
+              <p class="text-xs text-emerald-600 font-semibold mb-1 uppercase tracking-wide">Hoàn thành</p>
+              <p id="sum-done" class="font-bold text-emerald-700 text-xl">-</p>
             </div>
-            <div class="bg-orange-50 rounded-xl p-2">
-              <p class="text-xs text-orange-500 mb-0.5">Tổng bán</p>
-              <p id="sum-sales" class="font-bold text-orange-700 text-lg">-</p>
+            <div class="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-3 border border-orange-100">
+              <p class="text-xs text-orange-500 font-semibold mb-1 uppercase tracking-wide">Tổng bán</p>
+              <p id="sum-sales" class="font-bold text-orange-700 text-xl">-</p>
             </div>
           </div>
         </div>
 
         <div id="report-list">
-          <p class="text-center text-gray-400 text-sm py-8">Chọn ngày để xem báo cáo</p>
+          <div class="text-center py-10">
+            <div class="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <i class="fas fa-chart-bar text-emerald-500 text-xl"></i>
+            </div>
+            <p class="text-gray-500 text-sm font-medium">Chọn ngày để xem báo cáo</p>
+          </div>
         </div>
       </div>
 
