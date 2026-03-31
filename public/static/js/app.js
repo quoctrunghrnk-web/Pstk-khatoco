@@ -123,17 +123,17 @@ window.App = (() => {
     <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-2xl z-50 safe-area-bottom">
       <div class="flex items-stretch max-w-lg mx-auto">
         ${navItems.map(item => `
-          <button class="nav-btn flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-colors
-            ${activePage === item.page ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'}"
+          <button class="nav-btn flex-1 flex flex-col items-center justify-center py-3 gap-0.5 transition-colors relative
+            ${activePage === item.page ? 'text-red-600' : 'text-gray-400 hover:text-gray-600'}"
             data-page="${item.page}">
-            <i class="fas ${item.icon} text-xl"></i>
+            ${activePage === item.page ? '<span class="absolute top-0 left-1/4 right-1/4 h-0.5 bg-red-500 rounded-b-full"></span>' : ''}
+            <i class="fas ${item.icon} text-lg"></i>
             <span class="text-xs font-medium">${item.label}</span>
-            ${activePage === item.page ? '<span class="w-1.5 h-1.5 bg-blue-600 rounded-full"></span>' : '<span class="w-1.5 h-1.5"></span>'}
           </button>
         `).join('')}
       </div>
-      <div class="text-center py-1 border-t border-gray-50 bg-gray-50">
-        <p class="text-gray-400 text-xs leading-tight">Phát triển bởi <a href="https://nhankiet.vn" class="text-blue-500 font-semibold">nhankiet.vn</a> &nbsp;·&nbsp; © 2026 Nhân Kiệt. All rights reserved.</p>
+      <div class="text-center py-1 border-t border-gray-50">
+        <p class="text-gray-400 text-[10px] leading-tight">Phát triển bởi <a href="https://nhankiet.vn" class="text-red-500 font-semibold">nhankiet.vn</a> &nbsp;·&nbsp; © 2026 Nhân Kiệt. All rights reserved.</p>
       </div>
     </nav>`
   }

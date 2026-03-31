@@ -8,6 +8,29 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* Safe area top - cho header cố định */
+.pt-safe-top {
+  padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+}
+
+/* Header sticky */
+.page-header-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+/* Activity photo - giới hạn kích thước */
+#activity-photo-grid .photo-slot img,
+#activity-photo-grid .photo-slot {
+  max-height: 140px;
+}
+
+/* Compact card spacing trên mobile nhỏ */
+@media (max-width: 380px) {
+  .max-w-lg { padding-left: 0.75rem; padding-right: 0.75rem; }
+}
+
 /* Smooth scroll */
 html {
   scroll-behavior: smooth;

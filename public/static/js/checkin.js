@@ -30,21 +30,28 @@ window.CheckinModule = (() => {
   // ── renderPage ──────────────────────────────
   function renderPage() {
     return `
-    <div class="pb-28">
-      <!-- Header -->
-      <div class="bg-gradient-to-br from-green-700 to-green-900 text-white px-4 pt-12 pb-20">
-        <div class="flex items-center justify-between mb-1">
-          <div class="flex items-center gap-2">
-            <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt"
-              class="w-8 h-8 object-contain rounded-lg bg-white/15 p-0.5 flex-shrink-0" />
-            <h2 class="text-xl font-bold">Check-in / Check-out</h2>
+    <div class="pb-28 bg-gray-50 min-h-screen">
+      <!-- Header cân đối, logo nổi bật -->
+      <div class="bg-white border-b border-gray-100 shadow-sm px-4 pt-safe-top sticky top-0 z-40">
+        <div class="max-w-lg mx-auto flex items-center gap-3 h-14">
+          <!-- Logo nền xanh lá nhạt để logo đỏ nổi bật -->
+          <div class="w-10 h-10 bg-green-50 border-2 border-green-100 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
+            <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="NK"
+              class="w-8 h-8 object-contain block" />
           </div>
-          <span id="ci-live-time" class="text-green-200 text-sm font-mono"></span>
+          <!-- Title -->
+          <div class="flex-1 min-w-0">
+            <h2 class="text-sm font-bold text-gray-800 leading-tight">Check-in / Check-out</h2>
+            <p class="text-green-600 text-xs" id="ci-date-display">Đang tải...</p>
+          </div>
+          <!-- Live time -->
+          <span id="ci-live-time" class="text-gray-600 text-sm font-mono flex-shrink-0 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100"></span>
         </div>
-        <p class="text-green-200 text-sm" id="ci-date-display">Đang tải...</p>
       </div>
+      <!-- Green accent bar -->
+      <div class="h-1 bg-gradient-to-r from-green-500 to-emerald-400"></div>
 
-      <div class="px-4 -mt-12 space-y-4">
+      <div class="px-4 mt-4 space-y-3 max-w-lg mx-auto">
 
         <!-- ── Card trạng thái hôm nay ── -->
         <div class="bg-white rounded-2xl shadow-lg p-4">
@@ -127,15 +134,15 @@ window.CheckinModule = (() => {
         <!-- ── Card: Ảnh hoạt động bán hàng ── -->
         <div id="ci-activity-section" class="hidden bg-white rounded-2xl shadow p-4">
           <div class="flex items-center justify-between mb-3">
-            <h3 class="font-semibold text-gray-800">
-              <i class="fas fa-images mr-2 text-orange-500"></i>Ảnh hoạt động
+            <h3 class="font-semibold text-gray-800 text-sm">
+              <i class="fas fa-images mr-1.5 text-orange-500"></i>Ảnh hoạt động
             </h3>
-            <span id="ci-activity-label" class="text-xs text-gray-400">Tối đa 4 ảnh</span>
+            <span id="ci-activity-label" class="text-xs text-gray-400 bg-orange-50 px-2 py-0.5 rounded-full">Tối đa 4 ảnh</span>
           </div>
-          <!-- Grid 4 slot ảnh — không thay thế, chỉ khởi tạo 1 lần -->
+          <!-- Grid ảnh 2 cột, kích thước vừa phải -->
           <div id="activity-photo-grid" class="grid grid-cols-2 gap-2 mb-3"></div>
           <button id="btn-save-activity"
-            class="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl
+            class="w-full py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl
                    text-sm font-medium hidden">
             <i class="fas fa-save mr-1"></i>Lưu ảnh hoạt động
           </button>
@@ -143,8 +150,8 @@ window.CheckinModule = (() => {
 
         <!-- ── Lịch sử ── -->
         <div class="bg-white rounded-2xl shadow p-4">
-          <h3 class="font-semibold text-gray-800 mb-3">
-            <i class="fas fa-history mr-2 text-gray-400"></i>Lịch sử gần đây
+          <h3 class="font-semibold text-gray-800 mb-3 text-sm">
+            <i class="fas fa-history mr-1.5 text-gray-400"></i>Lịch sử gần đây
           </h3>
           <div id="ci-history-list" class="space-y-2">
             <p class="text-center text-gray-300 text-sm py-4">
@@ -153,6 +160,8 @@ window.CheckinModule = (() => {
           </div>
         </div>
 
+        <!-- Spacer bottom nav -->
+        <div class="h-2"></div>
       </div>
     </div>
     `

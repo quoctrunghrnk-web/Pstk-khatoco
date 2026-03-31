@@ -53,43 +53,47 @@ window.AdminModule = (() => {
   // ── renderPage ────────────────────────────────
   function renderPage() {
     return `
-    <div class="pb-24">
-      <!-- Header -->
-      <div class="bg-gradient-to-br from-red-700 to-red-900 text-white px-4 pt-12 pb-20">
-        <div class="flex items-start justify-between">
-          <div class="flex items-center gap-3">
-            <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt"
-              class="w-10 h-10 object-contain rounded-xl bg-white/15 p-0.5 flex-shrink-0" />
-            <div>
-              <h2 class="text-xl font-bold mb-1"><i class="fas fa-shield-alt mr-2"></i>Quản trị viên</h2>
-              <p class="text-red-200 text-sm">Quản lý nhân viên và theo dõi hoạt động</p>
-            </div>
+    <div class="pb-24 bg-gray-50 min-h-screen">
+      <!-- Header trắng cân đối, logo nổi bật -->
+      <div class="bg-white border-b border-gray-100 shadow-sm px-4 sticky top-0 z-40 pt-safe-top">
+        <div class="max-w-2xl mx-auto flex items-center gap-3 h-14">
+          <!-- Logo nền đỏ nhạt, logo đỏ nổi bật -->
+          <div class="w-10 h-10 bg-red-50 border-2 border-red-100 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
+            <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="NK"
+              class="w-8 h-8 object-contain block" />
           </div>
-          <div class="flex items-center gap-2 mt-1">
+          <!-- Title -->
+          <div class="flex-1 min-w-0">
+            <h2 class="text-sm font-bold text-gray-800">Quản trị viên</h2>
+            <p class="text-gray-400 text-xs">Nhân Kiệt &nbsp;·&nbsp; <span class="text-red-500">Quản lý nhân viên &amp; hoạt động</span></p>
+          </div>
+          <!-- Actions -->
+          <div class="flex items-center gap-1.5 flex-shrink-0">
             <button id="btn-admin-change-pw"
-              class="flex items-center gap-1 px-3 py-1.5 bg-white/15 hover:bg-white/25 rounded-xl text-sm transition-colors">
+              class="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200" title="Đổi mật khẩu">
               <i class="fas fa-key text-xs"></i>
-              <span class="hidden sm:inline">Đổi MK</span>
             </button>
             <button id="btn-admin-logout"
-              class="flex items-center gap-1 px-3 py-1.5 bg-white/15 hover:bg-red-500 rounded-xl text-sm transition-colors">
+              class="flex items-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-medium transition-colors border border-red-200">
               <i class="fas fa-sign-out-alt text-xs"></i>
-              <span>Đăng xuất</span>
+              <span>Thoát</span>
             </button>
           </div>
         </div>
       </div>
+      <!-- Red accent bar -->
+      <div class="h-1 bg-gradient-to-r from-red-600 to-orange-400"></div>
 
       <!-- Tabs (3 tab) -->
-      <div class="px-4 -mt-10 mb-4">
-        <div class="bg-white rounded-2xl shadow flex overflow-hidden">
-          <button class="admin-tab flex-1 py-3 text-sm font-medium transition-colors bg-red-600 text-white" data-tab="staff">
+      <div class="px-4 mt-4 mb-4 max-w-2xl mx-auto">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 flex overflow-hidden">
+          <button class="admin-tab flex-1 py-2.5 text-sm font-semibold transition-colors bg-red-600 text-white" data-tab="staff">
             <i class="fas fa-users mr-1"></i>Nhân viên
           </button>
-          <button class="admin-tab flex-1 py-3 text-sm font-medium transition-colors text-gray-600 hover:bg-gray-50" data-tab="provinces">
+          <button class="admin-tab flex-1 py-2.5 text-sm font-medium transition-colors text-gray-500 hover:bg-gray-50" data-tab="provinces">
             <i class="fas fa-map-marker-alt mr-1"></i>Tỉnh/Thành
           </button>
-          <button class="admin-tab flex-1 py-3 text-sm font-medium transition-colors text-gray-600 hover:bg-gray-50" data-tab="reports">
+          <button class="admin-tab flex-1 py-2.5 text-sm font-medium transition-colors text-gray-500 hover:bg-gray-50" data-tab="reports">
             <i class="fas fa-chart-bar mr-1"></i>Báo cáo
           </button>
         </div>
@@ -591,25 +595,25 @@ window.AdminModule = (() => {
           ${r.notes            ? `<div class="meta-item"><span class="meta-icon">📝</span><span>${r.notes}</span></div>`                        : ''}
         </div>` : ''}
 
-        <!-- Ảnh: layout 3 cột cho 3 nhóm -->
+        <!-- Ảnh: layout dọc theo nhóm, ảnh to dễ nhìn -->
         <div class="photos-section">
-          <div class="photo-col ${ciImgs.length===0?'no-photo':''}">
-            <div class="photos-title">📷 Check-in</div>
+          <div class="photo-group ${ciImgs.length===0?'no-photo':''}">
+            <div class="photos-title">📷 Ảnh Check-in</div>
             <div class="photo-grid cols-${Math.min(ciImgs.length||1,2)}">
-              ${ciImgs.length > 0 ? ciImgs.map((s,j)=>imgCell(s,`CI-${j+1}`)).join('') : imgCell(null,'CI')}
+              ${ciImgs.length > 0 ? ciImgs.map((s,j)=>imgCell(s,`Check-in ${j+1}`)).join('') : imgCell(null,'Check-in')}
             </div>
           </div>
           ${actImgs.length > 0 ? `
-          <div class="photo-col">
-            <div class="photos-title">🎯 Hoạt động</div>
+          <div class="photo-group">
+            <div class="photos-title">🎯 Ảnh hoạt động</div>
             <div class="photo-grid cols-${Math.min(actImgs.length,2)}">
-              ${actImgs.map((s,j)=>imgCell(s,`HĐ-${j+1}`)).join('')}
+              ${actImgs.map((s,j)=>imgCell(s,`Hoạt động ${j+1}`)).join('')}
             </div>
           </div>` : ''}
-          <div class="photo-col ${coImgs.length===0?'no-photo':''}">
-            <div class="photos-title">📷 Check-out</div>
+          <div class="photo-group ${coImgs.length===0?'no-photo':''}">
+            <div class="photos-title">📷 Ảnh Check-out</div>
             <div class="photo-grid cols-${Math.min(coImgs.length||1,2)}">
-              ${coImgs.length > 0 ? coImgs.map((s,j)=>imgCell(s,`CO-${j+1}`)).join('') : imgCell(null,'CO')}
+              ${coImgs.length > 0 ? coImgs.map((s,j)=>imgCell(s,`Check-out ${j+1}`)).join('') : imgCell(null,'Check-out')}
             </div>
           </div>
         </div>
@@ -623,76 +627,74 @@ window.AdminModule = (() => {
 <style>
 /* ── Reset ── */
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:#1a1a1a;background:#f8f9fa;}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#1a1a1a;background:#f4f6f8;}
 
 /* ── Page header ── */
-.page-header{background:linear-gradient(135deg,#c0392b 0%,#7f1d1d 100%);color:#fff;padding:18px 24px 14px;margin-bottom:0;}
-.hdr-top{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
-.hdr-logo-wrap{background:#fff;border-radius:12px;padding:6px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.2);}
-.hdr-logo{width:56px;height:56px;object-fit:contain;display:block;}
+.page-header{background:linear-gradient(135deg,#c0392b 0%,#7f1d1d 100%);color:#fff;padding:20px 28px 16px;margin-bottom:0;}
+.hdr-top{display:flex;align-items:center;gap:16px;margin-bottom:14px;}
+.hdr-logo-wrap{background:#fff;border-radius:14px;padding:8px;flex-shrink:0;box-shadow:0 3px 12px rgba(0,0,0,.25);}
+.hdr-logo{width:60px;height:60px;object-fit:contain;display:block;}
 .hdr-brand{flex:1;}
-.hdr-company{font-size:10px;opacity:.75;letter-spacing:.5px;text-transform:uppercase;margin-bottom:2px;}
-.hdr-title{font-size:20px;font-weight:800;line-height:1.1;margin-bottom:3px;}
-.hdr-sub{font-size:11px;opacity:.85;}
-.hdr-stats{display:flex;gap:10px;}
-.stat-box{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:8px 16px;text-align:center;min-width:90px;}
-.stat-label{font-size:9px;opacity:.75;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:2px;}
-.stat-val{font-size:20px;font-weight:800;display:block;}
+.hdr-company{font-size:10px;opacity:.75;letter-spacing:.8px;text-transform:uppercase;margin-bottom:3px;}
+.hdr-title{font-size:22px;font-weight:800;line-height:1.15;margin-bottom:4px;}
+.hdr-sub{font-size:12px;opacity:.88;}
+.hdr-stats{display:flex;gap:12px;}
+.stat-box{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.25);border-radius:12px;padding:10px 20px;text-align:center;min-width:100px;}
+.stat-label{font-size:9px;opacity:.78;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;}
+.stat-val{font-size:22px;font-weight:800;display:block;}
 
 /* ── Staff block ── */
-.staff-block{background:#fff;border-radius:12px;margin:12px 12px 0;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);page-break-inside:avoid;}
-.staff-header{display:flex;align-items:center;gap:10px;background:linear-gradient(90deg,#f8f9fa,#fff);padding:10px 14px;border-bottom:2px solid #f0f0f0;}
-.staff-no{width:28px;height:28px;background:#c0392b;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;}
+.staff-block{background:#fff;border-radius:14px;margin:14px 14px 0;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);page-break-inside:avoid;}
+.staff-header{display:flex;align-items:center;gap:12px;background:linear-gradient(90deg,#fff5f5,#fff);padding:12px 16px;border-bottom:2px solid #fef2f2;}
+.staff-no{width:32px;height:32px;background:#c0392b;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;}
 .staff-info{flex:1;}
-.staff-info strong{font-size:13px;display:block;color:#111;font-weight:700;}
-.staff-sub{font-size:10px;color:#6b7280;margin-top:1px;}
-.status-badge{font-size:10px;padding:3px 10px;border-radius:20px;font-weight:700;white-space:nowrap;}
+.staff-info strong{font-size:14px;display:block;color:#111;font-weight:700;}
+.staff-sub{font-size:11px;color:#6b7280;margin-top:2px;}
+.status-badge{font-size:11px;padding:4px 12px;border-radius:20px;font-weight:700;white-space:nowrap;}
 .status-badge.done{background:#dcfce7;color:#166534;border:1px solid #86efac;}
 .status-badge.progress{background:#fef9c3;color:#854d0e;border:1px solid #fde047;}
 
 /* ── Info row ── */
 .info-row{display:flex;align-items:stretch;padding:0;border-bottom:1px solid #f0f0f0;}
-.info-item{flex:1;text-align:center;padding:10px 6px;}
+.info-item{flex:1;text-align:center;padding:12px 8px;}
 .info-sep{width:1px;background:#f0f0f0;}
-.info-label{font-size:9px;color:#9ca3af;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.3px;}
-.info-value{font-size:15px;font-weight:700;color:#1f2937;display:block;}
+.info-label{font-size:9px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px;}
+.info-value{font-size:17px;font-weight:700;color:#1f2937;display:block;}
 .info-value.sales{color:#059669;}
 
 /* ── Meta (address/notes) ── */
-.meta-row{padding:6px 14px 4px;border-bottom:1px solid #f0f0f0;background:#fafafa;}
-.meta-item{display:flex;align-items:baseline;gap:5px;font-size:9.5px;color:#4b5563;line-height:1.5;}
+.meta-row{padding:8px 16px 6px;border-bottom:1px solid #f0f0f0;background:#fafafa;}
+.meta-item{display:flex;align-items:baseline;gap:6px;font-size:10px;color:#4b5563;line-height:1.6;margin-bottom:2px;}
 .meta-icon{flex-shrink:0;}
 
-/* ── Photos ── */
-.photos-section{display:flex;gap:0;border-top:1px solid #f0f0f0;}
-.photo-col{flex:1;padding:10px 10px 12px;border-right:1px solid #f0f0f0;}
-.photo-col:last-child{border-right:none;}
-.photos-title{font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;}
-.photo-grid{display:grid;gap:5px;}
+/* ── Photos - layout dọc theo nhóm, ảnh to ── */
+.photos-section{padding:14px 16px 16px;}
+.photo-group{margin-bottom:14px;}
+.photo-group:last-child{margin-bottom:0;}
+.photos-title{font-size:10px;color:#374151;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #f3f4f6;display:flex;align-items:center;gap:6px;}
+.photo-grid{display:grid;gap:8px;}
 .photo-grid.cols-1{grid-template-columns:1fr;}
 .photo-grid.cols-2{grid-template-columns:1fr 1fr;}
-.photo-grid.cols-3{grid-template-columns:1fr 1fr 1fr;}
-.photo-grid.cols-4{grid-template-columns:1fr 1fr;}
-.img-cell{display:flex;flex-direction:column;align-items:center;}
-.img-label{font-size:8px;color:#9ca3af;margin-bottom:2px;display:block;}
-.img-cell img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:7px;border:1px solid #e5e7eb;display:block;}
-.img-empty{width:100%;aspect-ratio:4/3;background:#f9fafb;border-radius:7px;border:2px dashed #d1d5db;display:flex;align-items:center;justify-content:center;}
-.img-empty span{font-size:8px;color:#d1d5db;}
-.no-photo .photo-grid{opacity:.4;}
+.img-cell{display:flex;flex-direction:column;}
+.img-label{font-size:9px;color:#9ca3af;margin-bottom:3px;display:block;}
+.img-cell img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb;display:block;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+.img-empty{width:100%;aspect-ratio:4/3;background:#f9fafb;border-radius:10px;border:2px dashed #d1d5db;display:flex;align-items:center;justify-content:center;}
+.img-empty span{font-size:9px;color:#d1d5db;}
+.photo-group.no-photo .photo-grid{opacity:.35;}
 
 /* ── Footer ── */
-.page-footer{display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 24px;margin:12px 12px 0;background:#fff;border-radius:12px 12px 0 0;border-top:3px solid #c0392b;font-size:10px;color:#6b7280;}
-.footer-logo-wrap{background:#fff;border-radius:7px;border:1px solid #e5e7eb;padding:3px;}
-.footer-logo{width:28px;height:28px;object-fit:contain;display:block;}
-.footer-text{line-height:1.6;}
+.page-footer{display:flex;align-items:center;justify-content:center;gap:12px;padding:16px 28px;margin:14px 14px 0;background:#fff;border-radius:14px 14px 0 0;border-top:3px solid #c0392b;font-size:11px;color:#6b7280;}
+.footer-logo-wrap{background:#fff5f5;border-radius:9px;border:1px solid #fecaca;padding:5px;}
+.footer-logo{width:32px;height:32px;object-fit:contain;display:block;}
+.footer-text{line-height:1.7;}
 .footer-text strong{color:#c0392b;}
 
 /* ── Print ── */
 @media print{
   body{background:#fff;}
-  @page{margin:8mm 8mm 10mm;size:A4 portrait;}
-  .staff-block{page-break-inside:avoid;break-inside:avoid;margin:8px 0 0;}
-  .page-footer{margin:8px 0 0;}
+  @page{margin:10mm 10mm 12mm;size:A4 portrait;}
+  .staff-block{page-break-inside:avoid;break-inside:avoid;margin:10px 0 0;}
+  .page-footer{margin:10px 0 0;}
 }
 </style></head><body>
 

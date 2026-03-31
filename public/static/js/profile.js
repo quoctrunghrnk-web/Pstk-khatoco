@@ -16,25 +16,27 @@ window.ProfileModule = (() => {
   function renderPage() {
     const user = Auth.getUser()
     return `
-    <div class="pb-24">
-      <!-- Header -->
-      <div class="bg-gradient-to-br from-blue-700 to-blue-900 text-white px-4 pt-12 pb-16 relative">
-        <div class="flex items-center gap-3">
-          <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur">
-            <i class="fas fa-user text-2xl"></i>
+    <div class="pb-24 bg-gray-50 min-h-screen">
+      <!-- Header trắng cân đối -->
+      <div class="bg-white border-b border-gray-100 shadow-sm px-4 sticky top-0 z-40 pt-safe-top">
+        <div class="max-w-lg mx-auto flex items-center gap-3 h-14">
+          <!-- Logo nền xanh dương nhạt -->
+          <div class="w-10 h-10 bg-blue-50 border-2 border-blue-100 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
+            <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="NK"
+              class="w-8 h-8 object-contain block" />
           </div>
+          <!-- Info -->
           <div class="flex-1 min-w-0">
-            <h2 class="text-xl font-bold">${user?.full_name || 'Nhân viên'}</h2>
-            <p class="text-blue-200 text-sm">@${user?.username}</p>
-            <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full">${user?.role === 'admin' ? 'Quản trị viên' : 'Nhân viên'}</span>
+            <h2 class="text-sm font-bold text-gray-800 truncate">${user?.full_name || 'Nhân viên'}</h2>
+            <p class="text-gray-400 text-xs">@${user?.username} &nbsp;·&nbsp; <span class="text-blue-500">${user?.role === 'admin' ? 'Quản trị viên' : 'Nhân viên'}</span></p>
           </div>
-          <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt"
-            class="w-10 h-10 object-contain rounded-xl bg-white/15 p-0.5 flex-shrink-0" />
         </div>
       </div>
+      <!-- Blue accent bar -->
+      <div class="h-1 bg-gradient-to-r from-blue-500 to-indigo-400"></div>
 
       <!-- Content cards -->
-      <div class="px-4 -mt-8 space-y-4">
+      <div class="px-4 mt-4 space-y-3 max-w-lg mx-auto">
 
         <!-- Loading skeleton -->
         <div id="profile-loading" class="bg-white rounded-2xl p-4 shadow flex items-center justify-center h-32">
