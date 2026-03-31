@@ -38,7 +38,7 @@ auth.post('/register', async (c) => {
   } = body
 
   // ── Validate bắt buộc ──
-  if (!username?.trim())      return c.json(err('Vui lòng nhập tên đăng nhập'), 400)
+  if (!username?.trim())      return c.json(err('Vui lòng nhập số điện thoại'), 400)
   if (!password)              return c.json(err('Vui lòng nhập mật khẩu'), 400)
   if (!full_name?.trim())     return c.json(err('Vui lòng nhập họ và tên'), 400)
 
@@ -47,15 +47,16 @@ auth.post('/register', async (c) => {
     return c.json(err('Mật khẩu xác nhận không khớp'), 400)
   }
 
-  // Tên đăng nhập chỉ chữ, số, dấu gạch dưới
-  if (!/^[a-zA-Z0-9_]{3,30}$/.test(username.trim())) {
-    return c.json(err('Tên đăng nhập chỉ gồm chữ, số, gạch dưới (3-30 ký tự)'), 400)
+  // Số điện thoại Việt Nam: 10 chữ số, bắt đầu bằng 0
+  const phone_clean = username.trim().replace(/\s+/g, '')
+  if (!/^0[0-9]{9}$/.test(phone_clean)) {
+    return c.json(err('Số điện thoại không hợp lệ (10 chữ số, bắt đầu bằng 0)'), 400)
   }
 
-  // Kiểm tra trùng tên đăng nhập
+  // Kiểm tra trùng số điện thoại
   const exists = await c.env.DB.prepare('SELECT id FROM users WHERE username = ?')
-    .bind(username.trim().toLowerCase()).first()
-  if (exists) return c.json(err('Tên đăng nhập đã tồn tại, vui lòng chọn tên khác'), 400)
+    .bind(phone_clean).first()
+  if (exists) return c.json(err('Số điện thoại đã được đăng ký, vui lòng dùng số khác'), 400)
 
   // ── Validate ảnh CCCD ──
   const IMG_MAX = 380 * 1024
@@ -73,7 +74,7 @@ auth.post('/register', async (c) => {
   const result = await c.env.DB.prepare(`
     INSERT INTO users (username, password_hash, full_name, role, is_active, account_status, province)
     VALUES (?, ?, ?, 'staff', 1, 'pending', ?)
-  `).bind(username.trim().toLowerCase(), hash, full_name.trim(), province?.trim() || null).run()
+  `).bind(phone_clean, hash, full_name.trim(), province?.trim() || null).run()
 
   const newUserId = result.meta.last_row_id
 
@@ -88,7 +89,7 @@ auth.post('/register', async (c) => {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     newUserId,
-    phone              ?? null,
+    phone_clean        ?? null,
     cccd_number        ?? null,
     cccd_full_name     ?? null,
     cccd_dob           ?? null,
@@ -113,26 +114,29 @@ auth.post('/register', async (c) => {
 auth.post('/login', async (c) => {
   const { username, password } = await c.req.json()
   if (!username || !password) {
-    return c.json(err('Vui lòng nhập tên đăng nhập và mật khẩu'), 400)
+    return c.json(err('Vui lòng nhập số điện thoại và mật khẩu'), 400)
   }
 
-  // Lấy user — không lọc is_active/account_status để trả thông báo chính xác
+  // Chuẩn hoá SĐT: bỏ khoảng trắng
+  const phone_input = username.trim().replace(/\s+/g, '')
+
+  // Lấy user theo username (= SĐT) — không lọc is_active/account_status để trả thông báo chính xác
   const user = await c.env.DB.prepare(
     'SELECT * FROM users WHERE username = ?'
-  ).bind(username.trim().toLowerCase()).first<{
+  ).bind(phone_input).first<{
     id: number; username: string; password_hash: string
     full_name: string; role: string
     is_active: number; account_status: string
   }>()
 
   if (!user) {
-    return c.json(err('Tên đăng nhập hoặc mật khẩu không đúng'), 401)
+    return c.json(err('Số điện thoại hoặc mật khẩu không đúng'), 401)
   }
 
   // Kiểm tra mật khẩu trước (không lộ thông tin trạng thái nếu sai mật khẩu)
   const valid = await verifyPassword(password, user.password_hash)
   if (!valid) {
-    return c.json(err('Tên đăng nhập hoặc mật khẩu không đúng'), 401)
+    return c.json(err('Số điện thoại hoặc mật khẩu không đúng'), 401)
   }
 
   // Kiểm tra trạng thái tài khoản

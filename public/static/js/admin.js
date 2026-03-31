@@ -756,8 +756,8 @@ ${rows || '<div style="text-align:center;padding:60px;color:#9ca3af;font-size:14
           <div><label class="block text-sm text-gray-600 mb-1">Họ và tên</label>
             <input type="text" name="full_name" required
               class="w-full px-3 py-2 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500" /></div>
-          <div><label class="block text-sm text-gray-600 mb-1">Tên đăng nhập</label>
-            <input type="text" name="username" required
+          <div><label class="block text-sm text-gray-600 mb-1">Số điện thoại <span class="text-xs text-gray-400">(dùng để đăng nhập)</span></label>
+            <input type="tel" name="username" required placeholder="VD: 0901234567" inputmode="tel"
               class="w-full px-3 py-2 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500" /></div>
           <div><label class="block text-sm text-gray-600 mb-1">Mật khẩu</label>
             <input type="password" name="password" required

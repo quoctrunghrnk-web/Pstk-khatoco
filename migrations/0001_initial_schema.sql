@@ -94,8 +94,8 @@ CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token_hash);
 
 -- =============================================
 -- Seed: Tài khoản admin mặc định
--- password: Admin@123 (hash bcrypt-like, dùng SHA256 đơn giản)
+-- Đăng nhập bằng SĐT (username = số điện thoại)
 -- =============================================
--- Admin mặc định: password = admin123
+-- Admin mặc định: SĐT = 0900000000, password = admin123
 INSERT OR IGNORE INTO users (username, password_hash, full_name, role)
-VALUES ('admin', 'd550dfd79dc8f5c592d648ac3897d6f8b7201647e08979b0fb42376ff780e20a', 'Quản Trị Viên', 'admin');
+VALUES ('0900000000', 'd550dfd79dc8f5c592d648ac3897d6f8b7201647e08979b0fb42376ff780e20a', 'Quản Trị Viên', 'admin');

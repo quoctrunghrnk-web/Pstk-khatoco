@@ -78,14 +78,14 @@ window.Auth = (() => {
             <div class="p-6 sm:p-8">
               <form id="login-form" class="space-y-5">
                 <div>
-                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Số điện thoại / Tên đăng nhập</label>
+                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Số điện thoại</label>
                   <div class="relative">
                     <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                       <i class="fas fa-mobile-alt text-base"></i>
                     </span>
-                    <input type="text" id="login-username" placeholder="Ví dụ: 0901234567"
+                    <input type="tel" id="login-username" placeholder="Nhập số điện thoại (VD: 0901234567)"
                       class="w-full pl-11 pr-4 py-3.5 border-2 border-gray-200 rounded-2xl focus:border-red-500 focus:ring-0 outline-none text-sm font-medium transition-colors bg-gray-50 focus:bg-white"
-                      autocomplete="username" inputmode="tel" required />
+                      autocomplete="tel" inputmode="tel" required />
                   </div>
                 </div>
                 <div>
