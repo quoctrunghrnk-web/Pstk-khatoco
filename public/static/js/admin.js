@@ -15,8 +15,24 @@ window.AdminModule = (() => {
     return `
     <div class="pb-24">
       <div class="bg-gradient-to-br from-red-700 to-red-900 text-white px-4 pt-12 pb-20">
-        <h2 class="text-xl font-bold mb-1"><i class="fas fa-shield-alt mr-2"></i>Quản trị viên</h2>
-        <p class="text-red-200 text-sm">Quản lý nhân viên và theo dõi hoạt động</p>
+        <div class="flex items-start justify-between">
+          <div>
+            <h2 class="text-xl font-bold mb-1"><i class="fas fa-shield-alt mr-2"></i>Quản trị viên</h2>
+            <p class="text-red-200 text-sm">Quản lý nhân viên và theo dõi hoạt động</p>
+          </div>
+          <div class="flex items-center gap-2 mt-1">
+            <button id="btn-admin-change-pw"
+              class="flex items-center gap-1 px-3 py-1.5 bg-white/15 hover:bg-white/25 rounded-xl text-sm transition-colors">
+              <i class="fas fa-key text-xs"></i>
+              <span class="hidden sm:inline">Đổi MK</span>
+            </button>
+            <button id="btn-admin-logout"
+              class="flex items-center gap-1 px-3 py-1.5 bg-white/15 hover:bg-red-500 rounded-xl text-sm transition-colors">
+              <i class="fas fa-sign-out-alt text-xs"></i>
+              <span>Đăng xuất</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Tabs -->
@@ -274,6 +290,22 @@ window.AdminModule = (() => {
         document.getElementById(`admin-tab-${btn.dataset.tab}`).classList.remove('hidden')
       })
     })
+
+    // Đăng xuất admin
+    document.getElementById('btn-admin-logout').onclick = () => {
+      Modal.confirm(
+        'Đăng xuất',
+        'Bạn có chắc muốn đăng xuất?',
+        () => Auth.logout(),
+        'Đăng xuất',
+        true   // nút xác nhận màu đỏ
+      )
+    }
+
+    // Đổi mật khẩu admin
+    document.getElementById('btn-admin-change-pw').onclick = () => {
+      Auth.showChangePasswordModal()
+    }
 
     // Add user
     document.getElementById('btn-add-user').onclick = showAddUserModal

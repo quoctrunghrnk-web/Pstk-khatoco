@@ -45,18 +45,23 @@ window.API = (() => {
     getHistory: (page = 1, limit = 10) => request('GET', `/checkin/history?page=${page}&limit=${limit}`),
     getCheckinDetail: (id) => request('GET', `/checkin/${id}`),
 
-    // Admin
+    // Admin - Nhân viên
     getUsers: () => request('GET', '/admin/users'),
     createUser: (data) => request('POST', '/admin/users', data),
     updateUser: (id, data) => request('PUT', `/admin/users/${id}`, data),
     deleteUser: (id) => request('DELETE', `/admin/users/${id}`),
+    getUserProfile: (id) => request('GET', `/admin/users/${id}/profile`),
     resetPassword: (user_id, new_password) => request('POST', '/admin/reset-password', { user_id, new_password }),
-    getAdminCheckins: (date, userId) => {
-      let q = '/admin/checkins?limit=50'
-      if (date) q += `&date=${date}`
-      if (userId) q += `&user_id=${userId}`
-      return request('GET', q)
+
+    // Admin - Check-in / Báo cáo
+    getAdminCheckins: (params = {}) => {
+      const q = new URLSearchParams({ limit: '100', ...params })
+      return request('GET', `/admin/checkins?${q}`)
     },
     getAdminCheckinDetail: (id) => request('GET', `/admin/checkins/${id}`),
+    getAdminSummary: (params = {}) => {
+      const q = new URLSearchParams(params)
+      return request('GET', `/admin/reports/summary?${q}`)
+    },
   }
 })()
