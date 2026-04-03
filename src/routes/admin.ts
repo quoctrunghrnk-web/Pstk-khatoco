@@ -377,4 +377,102 @@ admin.patch('/users/:id/province', async (c) => {
   return c.json(ok(null, province ? `Đã gán: ${province}` : 'Đã bỏ tỉnh/thành'))
 })
 
+// ══════════════════════════════════════════════════════════════════════════
+// PRODUCTS MANAGEMENT
+// ══════════════════════════════════════════════════════════════════════════
+
+// GET /api/admin/products
+admin.get('/products', async (c) => {
+  const rows = await c.env.DB.prepare(
+    'SELECT * FROM products ORDER BY sort_order, name'
+  ).all()
+  return c.json(ok(rows.results))
+})
+
+// POST /api/admin/products
+admin.post('/products', async (c) => {
+  const { name, unit, sort_order } = await c.req.json()
+  if (!name?.trim()) return c.json(err('Vui lòng nhập tên sản phẩm'), 400)
+  const exists = await c.env.DB.prepare('SELECT id FROM products WHERE name = ?').bind(name.trim()).first()
+  if (exists) return c.json(err('Sản phẩm đã tồn tại'), 400)
+  const r = await c.env.DB.prepare(
+    'INSERT INTO products (name, unit, sort_order) VALUES (?, ?, ?)'
+  ).bind(name.trim(), unit?.trim() || 'thùng', sort_order ?? 0).run()
+  return c.json(ok({ id: r.meta.last_row_id }, 'Đã thêm sản phẩm'), 201)
+})
+
+// PATCH /api/admin/products/:id
+admin.patch('/products/:id', async (c) => {
+  const id = parseInt(c.req.param('id'))
+  if (isNaN(id)) return c.json(err('ID không hợp lệ'), 400)
+  const { name, unit, is_active, sort_order } = await c.req.json()
+  if (name !== undefined && !name?.trim()) return c.json(err('Tên không được trống'), 400)
+  await c.env.DB.prepare(`
+    UPDATE products SET
+      name       = COALESCE(?, name),
+      unit       = COALESCE(?, unit),
+      is_active  = COALESCE(?, is_active),
+      sort_order = COALESCE(?, sort_order)
+    WHERE id = ?
+  `).bind(name?.trim() ?? null, unit?.trim() ?? null, is_active ?? null, sort_order ?? null, id).run()
+  return c.json(ok(null, 'Đã cập nhật'))
+})
+
+// DELETE /api/admin/products/:id
+admin.delete('/products/:id', async (c) => {
+  const id = parseInt(c.req.param('id'))
+  if (isNaN(id)) return c.json(err('ID không hợp lệ'), 400)
+  await c.env.DB.prepare('DELETE FROM products WHERE id = ?').bind(id).run()
+  return c.json(ok(null, 'Đã xóa sản phẩm'))
+})
+
+// ══════════════════════════════════════════════════════════════════════════
+// GIFTS MANAGEMENT
+// ══════════════════════════════════════════════════════════════════════════
+
+// GET /api/admin/gifts
+admin.get('/gifts', async (c) => {
+  const rows = await c.env.DB.prepare(
+    'SELECT * FROM gifts ORDER BY sort_order, name'
+  ).all()
+  return c.json(ok(rows.results))
+})
+
+// POST /api/admin/gifts
+admin.post('/gifts', async (c) => {
+  const { name, unit, sort_order } = await c.req.json()
+  if (!name?.trim()) return c.json(err('Vui lòng nhập tên quà tặng'), 400)
+  const exists = await c.env.DB.prepare('SELECT id FROM gifts WHERE name = ?').bind(name.trim()).first()
+  if (exists) return c.json(err('Quà tặng đã tồn tại'), 400)
+  const r = await c.env.DB.prepare(
+    'INSERT INTO gifts (name, unit, sort_order) VALUES (?, ?, ?)'
+  ).bind(name.trim(), unit?.trim() || 'cái', sort_order ?? 0).run()
+  return c.json(ok({ id: r.meta.last_row_id }, 'Đã thêm quà tặng'), 201)
+})
+
+// PATCH /api/admin/gifts/:id
+admin.patch('/gifts/:id', async (c) => {
+  const id = parseInt(c.req.param('id'))
+  if (isNaN(id)) return c.json(err('ID không hợp lệ'), 400)
+  const { name, unit, is_active, sort_order } = await c.req.json()
+  if (name !== undefined && !name?.trim()) return c.json(err('Tên không được trống'), 400)
+  await c.env.DB.prepare(`
+    UPDATE gifts SET
+      name       = COALESCE(?, name),
+      unit       = COALESCE(?, unit),
+      is_active  = COALESCE(?, is_active),
+      sort_order = COALESCE(?, sort_order)
+    WHERE id = ?
+  `).bind(name?.trim() ?? null, unit?.trim() ?? null, is_active ?? null, sort_order ?? null, id).run()
+  return c.json(ok(null, 'Đã cập nhật'))
+})
+
+// DELETE /api/admin/gifts/:id
+admin.delete('/gifts/:id', async (c) => {
+  const id = parseInt(c.req.param('id'))
+  if (isNaN(id)) return c.json(err('ID không hợp lệ'), 400)
+  await c.env.DB.prepare('DELETE FROM gifts WHERE id = ?').bind(id).run()
+  return c.json(ok(null, 'Đã xóa quà tặng'))
+})
+
 export default admin

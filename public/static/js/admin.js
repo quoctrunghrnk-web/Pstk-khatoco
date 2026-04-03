@@ -92,6 +92,9 @@ window.AdminModule = (() => {
           <button class="admin-tab flex-1 py-2.5 text-sm font-medium transition-all text-emerald-600 hover:bg-emerald-50" data-tab="reports">
             <i class="fas fa-chart-bar mr-1"></i>Báo cáo
           </button>
+          <button class="admin-tab flex-1 py-2.5 text-sm font-medium transition-all text-blue-600 hover:bg-blue-50" data-tab="products">
+            <i class="fas fa-box mr-1"></i>SP/QT
+          </button>
         </div>
       </div>
 
@@ -149,6 +152,45 @@ window.AdminModule = (() => {
         <div id="provinces-list">
           <div class="flex justify-center py-8"><i class="fas fa-spinner fa-spin text-indigo-400 text-2xl"></i></div>
         </div>
+      </div>
+
+      <!-- ═══ Tab: Sản phẩm & Quà tặng ═══ -->
+      <div id="admin-tab-products" class="px-4 space-y-4 hidden">
+
+        <!-- Sản phẩm -->
+        <div class="bg-white rounded-2xl shadow-md border border-blue-50 p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-bold text-gray-800 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>Danh sách sản phẩm
+            </h3>
+            <button id="btn-add-product"
+              class="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700
+                     text-white text-sm rounded-xl shadow-sm font-semibold">
+              <i class="fas fa-plus text-xs"></i>Thêm SP
+            </button>
+          </div>
+          <div id="products-list">
+            <div class="flex justify-center py-4"><i class="fas fa-spinner fa-spin text-blue-400 text-xl"></i></div>
+          </div>
+        </div>
+
+        <!-- Quà tặng -->
+        <div class="bg-white rounded-2xl shadow-md border border-amber-50 p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-bold text-gray-800 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>Danh sách quà tặng
+            </h3>
+            <button id="btn-add-gift"
+              class="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-amber-500 to-amber-600
+                     text-white text-sm rounded-xl shadow-sm font-semibold">
+              <i class="fas fa-plus text-xs"></i>Thêm QT
+            </button>
+          </div>
+          <div id="gifts-list">
+            <div class="flex justify-center py-4"><i class="fas fa-spinner fa-spin text-amber-400 text-xl"></i></div>
+          </div>
+        </div>
+
       </div>
 
       <!-- ═══ Tab: Báo cáo ═══ -->
@@ -904,23 +946,24 @@ ${rows || '<div style="text-align:center;padding:60px;color:#9ca3af;font-size:14
 
   // ── bindEvents ────────────────────────────────
   async function bindEvents() {
-    // Tab switching (3 tab)
+    // Tab switching
     document.querySelectorAll('.admin-tab').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.admin-tab').forEach(b => {
-          b.classList.remove('bg-red-600','text-white')
-          b.classList.add('text-gray-600')
+          b.classList.remove('bg-red-600','bg-gradient-to-b','from-red-600','to-red-700','text-white')
+          b.classList.add('text-gray-500')
         })
         btn.classList.add('bg-red-600','text-white')
-        btn.classList.remove('text-gray-600')
+        btn.classList.remove('text-gray-500','text-indigo-600','text-emerald-600','text-blue-600')
 
-        ;['staff','provinces','reports'].forEach(t => {
+        ;['staff','provinces','reports','products'].forEach(t => {
           document.getElementById(`admin-tab-${t}`)?.classList.add('hidden')
         })
         document.getElementById(`admin-tab-${btn.dataset.tab}`)?.classList.remove('hidden')
 
-        // Lazy-load tab tỉnh khi bấm vào
+        // Lazy-load tabs
         if (btn.dataset.tab === 'provinces') loadProvincesTab()
+        if (btn.dataset.tab === 'products') loadProductsTab()
       })
     })
 
@@ -936,6 +979,10 @@ ${rows || '<div style="text-align:center;padding:60px;color:#9ca3af;font-size:14
 
     // Thêm tỉnh
     document.getElementById('btn-add-province').onclick = showAddProvinceModal
+
+    // Sản phẩm / Quà tặng buttons
+    document.getElementById('btn-add-product').onclick = () => showAddProductModal()
+    document.getElementById('btn-add-gift').onclick = () => showAddGiftModal()
 
     // Filter NV theo tỉnh
     document.getElementById('btn-filter-staff').onclick = () => {
@@ -963,9 +1010,224 @@ ${rows || '<div style="text-align:center;padding:60px;color:#9ca3af;font-size:14
     await loadUsers()
   }
 
+  // ── Tab Sản phẩm & Quà tặng ────────────────
+  async function loadProductsTab() {
+    await Promise.all([loadProductsList(), loadGiftsList()])
+  }
+
+  async function loadProductsList() {
+    const listEl = document.getElementById('products-list')
+    if (!listEl) return
+    try {
+      const res = await API.getAdminProducts()
+      const products = res.data || []
+      if (products.length === 0) {
+        listEl.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">Chưa có sản phẩm nào</p>'
+        return
+      }
+      listEl.innerHTML = products.map(p => `
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl mb-2 border border-gray-100">
+          <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <i class="fas fa-wine-bottle text-blue-500 text-xs"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-sm text-gray-800 truncate">${p.name}</p>
+            <p class="text-xs text-gray-400">${p.unit || 'Chưa có đơn vị'} · Thứ tự: ${p.sort_order || 0}
+              · <span class="${p.is_active ? 'text-green-500' : 'text-red-500'}">${p.is_active ? 'Hoạt động' : 'Tắt'}</span>
+            </p>
+          </div>
+          <div class="flex gap-1.5 flex-shrink-0">
+            <button onclick="AdminModule.editProduct(${p.id},'${p.name.replace(/'/g,\"\\'\")}}','${(p.unit||'').replace(/'/g,\"\\'\")}}',${p.sort_order||0})"
+              class="w-8 h-8 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-xs">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button onclick="AdminModule.deleteProduct(${p.id})"
+              class="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg flex items-center justify-center text-xs">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      `).join('')
+    } catch (e) {
+      listEl.innerHTML = `<p class="text-red-400 text-sm text-center py-4">${e.message}</p>`
+    }
+  }
+
+  async function loadGiftsList() {
+    const listEl = document.getElementById('gifts-list')
+    if (!listEl) return
+    try {
+      const res = await API.getAdminGifts()
+      const gifts = res.data || []
+      if (gifts.length === 0) {
+        listEl.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">Chưa có quà tặng nào</p>'
+        return
+      }
+      listEl.innerHTML = gifts.map(g => `
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl mb-2 border border-amber-100">
+          <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <i class="fas fa-gift text-amber-500 text-xs"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-sm text-gray-800 truncate">${g.name}</p>
+            <p class="text-xs text-gray-400">${g.unit || 'Chưa có đơn vị'} · Thứ tự: ${g.sort_order || 0}
+              · <span class="${g.is_active ? 'text-green-500' : 'text-red-500'}">${g.is_active ? 'Hoạt động' : 'Tắt'}</span>
+            </p>
+          </div>
+          <div class="flex gap-1.5 flex-shrink-0">
+            <button onclick="AdminModule.editGift(${g.id},'${g.name.replace(/'/g,\"\\'\")}}','${(g.unit||'').replace(/'/g,\"\\'\")}}',${g.sort_order||0})"
+              class="w-8 h-8 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center text-xs">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button onclick="AdminModule.deleteGift(${g.id})"
+              class="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg flex items-center justify-center text-xs">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      `).join('')
+    } catch (e) {
+      listEl.innerHTML = `<p class="text-red-400 text-sm text-center py-4">${e.message}</p>`
+    }
+  }
+
+  function showAddProductModal(data = {}) {
+    const { close } = Modal.create(`
+      <div class="p-5">
+        <h3 class="text-base font-bold text-gray-800 mb-4">
+          <i class="fas fa-box mr-2 text-blue-500"></i>${data.id ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới'}
+        </h3>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Tên sản phẩm <span class="text-red-500">*</span></label>
+            <input type="text" id="prod-name" value="${data.name || ''}" placeholder="Ví dụ: White Horse 650ml"
+              class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Đơn vị</label>
+            <input type="text" id="prod-unit" value="${data.unit || ''}" placeholder="Ví dụ: chai, thùng, lon..."
+              class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Thứ tự hiển thị</label>
+            <input type="number" id="prod-order" value="${data.sort_order || 0}" min="0"
+              class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+          </div>
+        </div>
+        <p id="prod-err" class="text-red-500 text-xs mt-2 hidden"></p>
+        <div class="flex gap-3 mt-4">
+          <button id="prod-cancel" class="flex-1 py-2 border border-gray-200 rounded-xl text-gray-600 text-sm">Hủy</button>
+          <button id="prod-submit" class="flex-1 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold">
+            ${data.id ? 'Cập nhật' : 'Thêm'}
+          </button>
+        </div>
+      </div>
+    `)
+    document.getElementById('prod-cancel').onclick = close
+    document.getElementById('prod-submit').onclick = async () => {
+      const name = document.getElementById('prod-name').value.trim()
+      const unit = document.getElementById('prod-unit').value.trim()
+      const sort_order = parseInt(document.getElementById('prod-order').value) || 0
+      const errEl = document.getElementById('prod-err')
+      if (!name) { errEl.textContent = 'Vui lòng nhập tên sản phẩm'; errEl.classList.remove('hidden'); return }
+      try {
+        if (data.id) {
+          await API.updateProduct(data.id, { name, unit, sort_order })
+          Toast.success('Đã cập nhật sản phẩm')
+        } else {
+          await API.createProduct({ name, unit, sort_order })
+          Toast.success('Đã thêm sản phẩm')
+        }
+        close()
+        await loadProductsList()
+      } catch (e) { errEl.textContent = e.message; errEl.classList.remove('hidden') }
+    }
+  }
+
+  function showAddGiftModal(data = {}) {
+    const { close } = Modal.create(`
+      <div class="p-5">
+        <h3 class="text-base font-bold text-gray-800 mb-4">
+          <i class="fas fa-gift mr-2 text-amber-500"></i>${data.id ? 'Sửa quà tặng' : 'Thêm quà tặng mới'}
+        </h3>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Tên quà tặng <span class="text-red-500">*</span></label>
+            <input type="text" id="gift-name" value="${data.name || ''}" placeholder="Ví dụ: Bật lửa, Hộp diêm..."
+              class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-amber-400" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Đơn vị</label>
+            <input type="text" id="gift-unit" value="${data.unit || ''}" placeholder="Ví dụ: cái, hộp..."
+              class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-amber-400" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Thứ tự hiển thị</label>
+            <input type="number" id="gift-order" value="${data.sort_order || 0}" min="0"
+              class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-amber-400" />
+          </div>
+        </div>
+        <p id="gift-err" class="text-red-500 text-xs mt-2 hidden"></p>
+        <div class="flex gap-3 mt-4">
+          <button id="gift-cancel" class="flex-1 py-2 border border-gray-200 rounded-xl text-gray-600 text-sm">Hủy</button>
+          <button id="gift-submit" class="flex-1 py-2 bg-amber-500 text-white rounded-xl text-sm font-semibold">
+            ${data.id ? 'Cập nhật' : 'Thêm'}
+          </button>
+        </div>
+      </div>
+    `)
+    document.getElementById('gift-cancel').onclick = close
+    document.getElementById('gift-submit').onclick = async () => {
+      const name = document.getElementById('gift-name').value.trim()
+      const unit = document.getElementById('gift-unit').value.trim()
+      const sort_order = parseInt(document.getElementById('gift-order').value) || 0
+      const errEl = document.getElementById('gift-err')
+      if (!name) { errEl.textContent = 'Vui lòng nhập tên quà tặng'; errEl.classList.remove('hidden'); return }
+      try {
+        if (data.id) {
+          await API.updateGift(data.id, { name, unit, sort_order })
+          Toast.success('Đã cập nhật quà tặng')
+        } else {
+          await API.createGift({ name, unit, sort_order })
+          Toast.success('Đã thêm quà tặng')
+        }
+        close()
+        await loadGiftsList()
+      } catch (e) { errEl.textContent = e.message; errEl.classList.remove('hidden') }
+    }
+  }
+
+  // Public methods cho onclick buttons
+  function editProduct(id, name, unit, sort_order) {
+    showAddProductModal({ id, name, unit, sort_order })
+  }
+  function deleteProduct(id) {
+    Modal.confirm('Xóa sản phẩm', 'Bạn có chắc muốn xóa sản phẩm này?', async () => {
+      try {
+        await API.deleteProduct(id)
+        Toast.success('Đã xóa sản phẩm')
+        await loadProductsList()
+      } catch (e) { Toast.error(e.message) }
+    }, 'Xóa', true)
+  }
+  function editGift(id, name, unit, sort_order) {
+    showAddGiftModal({ id, name, unit, sort_order })
+  }
+  function deleteGift(id) {
+    Modal.confirm('Xóa quà tặng', 'Bạn có chắc muốn xóa quà tặng này?', async () => {
+      try {
+        await API.deleteGift(id)
+        Toast.success('Đã xóa quà tặng')
+        await loadGiftsList()
+      } catch (e) { Toast.error(e.message) }
+    }, 'Xóa', true)
+  }
+
   return {
     renderPage, bindEvents,
     showResetPassword, setUserStatus, showCheckinDetail,
-    confirmDeleteProvince
+    confirmDeleteProvince,
+    editProduct, deleteProduct,
+    editGift, deleteGift,
   }
 })()

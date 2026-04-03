@@ -1,11 +1,14 @@
 // =============================================
 // Module: Check-in / Check-out Routes
-// POST /api/checkin/start       - Check in
-// POST /api/checkin/activity    - Cập nhật 4 ảnh hoạt động
-// POST /api/checkin/end         - Check out
-// GET  /api/checkin/today       - Lấy record hôm nay
-// GET  /api/checkin/history     - Lịch sử
-// GET  /api/checkin/:id         - Chi tiết
+// POST /api/checkin/start        - Check in (tạo lượt mới)
+// POST /api/checkin/activity     - Cập nhật ảnh hoạt động
+// POST /api/checkin/end          - Check out
+// GET  /api/checkin/today        - Tất cả lượt hôm nay
+// GET  /api/checkin/active       - Lượt đang check-in (chưa checkout)
+// GET  /api/checkin/history      - Lịch sử
+// GET  /api/checkin/:id          - Chi tiết
+// GET  /api/checkin/products     - Danh sách sản phẩm
+// GET  /api/checkin/gifts        - Danh sách quà tặng
 // =============================================
 
 import { Hono } from 'hono'
@@ -21,18 +24,13 @@ const checkin = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 checkin.use('*', authMiddleware)
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-
-// Lấy ngày hôm nay YYYY-MM-DD theo timezone Vietnam (UTC+7)
 function getTodayVN(): string {
   const now = new Date(Date.now() + 7 * 60 * 60 * 1000)
   return now.toISOString().slice(0, 10)
 }
 
-// Giới hạn kích thước ảnh: base64 string ≤ 380KB
-// (280KB binary × 4/3 base64 overhead = ~373KB + overhead)
 const IMG_MAX_B64_LEN = 380 * 1024
 
-// Kiểm tra ảnh base64 hợp lệ và trong giới hạn
 function validateImage(b64: string | null | undefined, label: string): string | null {
   if (!b64) return null
   if (typeof b64 !== 'string') return `${label}: không hợp lệ`
@@ -42,7 +40,6 @@ function validateImage(b64: string | null | undefined, label: string): string | 
   return null
 }
 
-// Validate nhiều ảnh, trả về lỗi đầu tiên tìm thấy hoặc null
 function validateImages(images: [string | null | undefined, string][]): string | null {
   for (const [img, label] of images) {
     const e = validateImage(img, label)
@@ -51,71 +48,80 @@ function validateImages(images: [string | null | undefined, string][]): string |
   return null
 }
 
+// ── GET /api/checkin/products ──────────────────────────────────────────────
+checkin.get('/products', async (c) => {
+  const rows = await c.env.DB.prepare(
+    'SELECT id, name, unit FROM products WHERE is_active = 1 ORDER BY sort_order, name'
+  ).all()
+  return c.json(ok(rows.results))
+})
+
+// ── GET /api/checkin/gifts ─────────────────────────────────────────────────
+checkin.get('/gifts', async (c) => {
+  const rows = await c.env.DB.prepare(
+    'SELECT id, name, unit FROM gifts WHERE is_active = 1 ORDER BY sort_order, name'
+  ).all()
+  return c.json(ok(rows.results))
+})
+
 // ── POST /api/checkin/start ────────────────────────────────────────────────
+// Mỗi ngày có thể check-in nhiều lần (nhiều điểm bán)
 checkin.post('/start', async (c) => {
   const user  = c.get('user')
   const today = getTodayVN()
+  const body  = await c.req.json()
+  const { lat, lng, address, image1, image2, store_name } = body
 
-  // Kiểm tra đã check-in hôm nay chưa
-  const existing = await c.env.DB.prepare(
-    'SELECT id FROM checkins WHERE user_id = ? AND date = ?'
-  ).bind(user.id, today).first<{ id: number }>()
-
-  if (existing) {
-    return c.json(err('Bạn đã check-in hôm nay rồi'), 400)
+  // Điểm bán bắt buộc
+  if (!store_name?.trim()) {
+    return c.json(err('Vui lòng nhập tên điểm bán'), 400)
   }
 
-  const body = await c.req.json()
-  const { lat, lng, address, image1, image2 } = body
+  // Kiểm tra còn lượt chưa checkout không
+  const pending = await c.env.DB.prepare(
+    `SELECT id, store_name FROM checkins WHERE user_id = ? AND date = ? AND status = 'checkin' LIMIT 1`
+  ).bind(user.id, today).first<{ id: number; store_name: string }>()
+
+  if (pending) {
+    return c.json(err(`Bạn chưa check-out điểm "${pending.store_name}". Hãy check-out trước khi đến điểm mới.`), 400)
+  }
 
   if (!image1 || !image2) {
     return c.json(err('Vui lòng chụp đủ 2 ảnh check-in'), 400)
   }
 
-  // Validate kích thước ảnh
   const imgErr = validateImages([[image1, 'Ảnh 1'], [image2, 'Ảnh 2']])
   if (imgErr) return c.json(err(imgErr), 400)
 
-  // Validate sales_quantity không âm
-  const sqRaw = parseInt(body.sales_quantity)
-  const salesQty = isNaN(sqRaw) || sqRaw < 0 ? 0 : sqRaw
-
-  await c.env.DB.prepare(`
+  const result = await c.env.DB.prepare(`
     INSERT INTO checkins (
-      user_id, date, checkin_time, checkin_lat, checkin_lng, checkin_address,
+      user_id, date, store_name,
+      checkin_time, checkin_lat, checkin_lng, checkin_address,
       checkin_image1, checkin_image2, status
-    ) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, 'checkin')
+    ) VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, 'checkin')
   `).bind(
-    user.id, today,
-    lat   ?? null,
-    lng   ?? null,
-    address ?? null,
+    user.id, today, store_name.trim(),
+    lat ?? null, lng ?? null, address ?? null,
     image1, image2
   ).run()
 
-  return c.json(ok({ date: today }, 'Check-in thành công'))
+  return c.json(ok({ id: result.meta.last_row_id, date: today, store_name: store_name.trim() }, 'Check-in thành công'))
 })
 
 // ── POST /api/checkin/activity ─────────────────────────────────────────────
 checkin.post('/activity', async (c) => {
   const user  = c.get('user')
   const today = getTodayVN()
+  const body  = await c.req.json()
 
+  // Lấy lượt đang checkin (chưa checkout) hôm nay
   const record = await c.env.DB.prepare(
-    'SELECT id, status FROM checkins WHERE user_id = ? AND date = ?'
+    `SELECT id, status FROM checkins WHERE user_id = ? AND date = ? AND status = 'checkin' LIMIT 1`
   ).bind(user.id, today).first<{ id: number; status: string }>()
 
-  if (!record) {
-    return c.json(err('Bạn chưa check-in hôm nay'), 400)
-  }
-  if (record.status === 'checkout') {
-    return c.json(err('Không thể cập nhật ảnh sau khi đã check-out'), 400)
-  }
+  if (!record) return c.json(err('Không có lượt check-in nào đang hoạt động'), 400)
 
-  const body = await c.req.json()
   const { image1, image2, image3, image4 } = body
-
-  // Validate từng ảnh (chỉ các ảnh được gửi lên)
   const imgs: [string | null | undefined, string][] = [
     [image1, 'Ảnh HĐ 1'], [image2, 'Ảnh HĐ 2'],
     [image3, 'Ảnh HĐ 3'], [image4, 'Ảnh HĐ 4'],
@@ -131,10 +137,7 @@ checkin.post('/activity', async (c) => {
       activity_image4 = COALESCE(?, activity_image4),
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
-  `).bind(
-    image1 ?? null, image2 ?? null, image3 ?? null, image4 ?? null,
-    record.id
-  ).run()
+  `).bind(image1 ?? null, image2 ?? null, image3 ?? null, image4 ?? null, record.id).run()
 
   return c.json(ok(null, 'Cập nhật ảnh hoạt động thành công'))
 })
@@ -143,31 +146,40 @@ checkin.post('/activity', async (c) => {
 checkin.post('/end', async (c) => {
   const user  = c.get('user')
   const today = getTodayVN()
+  const body  = await c.req.json()
 
-  // Chỉ checkout record hôm nay
+  // Lấy lượt đang checkin hôm nay
   const record = await c.env.DB.prepare(
-    `SELECT id, status FROM checkins WHERE user_id = ? AND date = ?`
+    `SELECT id, status FROM checkins WHERE user_id = ? AND date = ? AND status = 'checkin' LIMIT 1`
   ).bind(user.id, today).first<{ id: number; status: string }>()
 
-  if (!record) {
-    return c.json(err('Bạn chưa check-in hôm nay'), 400)
-  }
+  if (!record) return c.json(err('Bạn chưa check-in hoặc đã check-out rồi'), 400)
 
-  const body = await c.req.json()
-  const { lat, lng, address, image1, image2, sales_quantity, notes } = body
+  const { lat, lng, address, image1, image2, notes, sales, gifts } = body
 
-  if (!image1 || !image2) {
-    return c.json(err('Vui lòng chụp đủ 2 ảnh check-out'), 400)
-  }
+  // Ảnh check-out bắt buộc
+  if (!image1 || !image2) return c.json(err('Vui lòng chụp đủ 2 ảnh check-out'), 400)
 
-  // Validate kích thước ảnh
   const imgErr = validateImages([[image1, 'Ảnh 1'], [image2, 'Ảnh 2']])
   if (imgErr) return c.json(err(imgErr), 400)
 
-  // Validate sales_quantity
-  const sqRaw = parseInt(sales_quantity)
-  const salesQty = isNaN(sqRaw) || sqRaw < 0 ? 0 : sqRaw
+  // Doanh số bắt buộc (phải có ít nhất 1 sản phẩm > 0)
+  const salesArr: { product_id: number; quantity: number }[] = Array.isArray(sales) ? sales : []
+  const hasAnySale = salesArr.some(s => s.quantity > 0)
+  if (!hasAnySale) return c.json(err('Vui lòng nhập doanh số ít nhất 1 sản phẩm'), 400)
 
+  // Ảnh hoạt động bắt buộc
+  const actRecord = await c.env.DB.prepare(
+    `SELECT activity_image1 FROM checkins WHERE id = ?`
+  ).bind(record.id).first<{ activity_image1: string | null }>()
+  if (!actRecord?.activity_image1) {
+    return c.json(err('Vui lòng chụp ít nhất 1 ảnh hoạt động trước khi check-out'), 400)
+  }
+
+  // Tính tổng doanh số
+  const totalQty = salesArr.reduce((sum, s) => sum + (s.quantity || 0), 0)
+
+  // Update checkin record
   await c.env.DB.prepare(`
     UPDATE checkins SET
       checkout_time = CURRENT_TIMESTAMP,
@@ -180,41 +192,88 @@ checkin.post('/end', async (c) => {
   `).bind(
     lat ?? null, lng ?? null, address ?? null,
     image1, image2,
-    salesQty,
-    notes ?? null,
+    totalQty, notes ?? null,
     record.id
   ).run()
+
+  // Lưu chi tiết doanh số từng sản phẩm
+  if (salesArr.length > 0) {
+    await c.env.DB.prepare(`DELETE FROM checkin_sales WHERE checkin_id = ?`).bind(record.id).run()
+    for (const s of salesArr) {
+      if (s.product_id && s.quantity >= 0) {
+        await c.env.DB.prepare(
+          `INSERT INTO checkin_sales (checkin_id, product_id, quantity) VALUES (?, ?, ?)`
+        ).bind(record.id, s.product_id, s.quantity).run()
+      }
+    }
+  }
+
+  // Lưu chi tiết quà tặng
+  const giftsArr: { gift_id: number; quantity: number }[] = Array.isArray(gifts) ? gifts : []
+  if (giftsArr.length > 0) {
+    await c.env.DB.prepare(`DELETE FROM checkin_gifts WHERE checkin_id = ?`).bind(record.id).run()
+    for (const g of giftsArr) {
+      if (g.gift_id && g.quantity > 0) {
+        await c.env.DB.prepare(
+          `INSERT INTO checkin_gifts (checkin_id, gift_id, quantity) VALUES (?, ?, ?)`
+        ).bind(record.id, g.gift_id, g.quantity).run()
+      }
+    }
+  }
 
   return c.json(ok(null, 'Check-out thành công'))
 })
 
-// ── GET /api/checkin/today ─────────────────────────────────────────────────
-checkin.get('/today', async (c) => {
+// ── GET /api/checkin/active ────────────────────────────────────────────────
+// Lượt đang check-in (chưa checkout) hôm nay
+checkin.get('/active', async (c) => {
   const user  = c.get('user')
   const today = getTodayVN()
-
-  // Chỉ lấy record hôm nay
   const record = await c.env.DB.prepare(
-    'SELECT * FROM checkins WHERE user_id = ? AND date = ?'
+    `SELECT * FROM checkins WHERE user_id = ? AND date = ? AND status = 'checkin' LIMIT 1`
   ).bind(user.id, today).first()
-
   return c.json(ok(record ?? null))
 })
 
-// ── GET /api/checkin/history?page=1&limit=10 ──────────────────────────────
+// ── GET /api/checkin/today ─────────────────────────────────────────────────
+// Tất cả lượt hôm nay (kể cả đã checkout)
+checkin.get('/today', async (c) => {
+  const user  = c.get('user')
+  const today = getTodayVN()
+  const rows  = await c.env.DB.prepare(
+    `SELECT * FROM checkins WHERE user_id = ? AND date = ? ORDER BY checkin_time ASC`
+  ).bind(user.id, today).all()
+
+  // Kèm chi tiết sales & gifts cho mỗi lượt
+  const records = await Promise.all(rows.results.map(async (r: any) => {
+    const sales = await c.env.DB.prepare(`
+      SELECT cs.quantity, p.name as product_name, p.unit
+      FROM checkin_sales cs JOIN products p ON cs.product_id = p.id
+      WHERE cs.checkin_id = ?
+    `).bind(r.id).all()
+    const gifts = await c.env.DB.prepare(`
+      SELECT cg.quantity, g.name as gift_name, g.unit
+      FROM checkin_gifts cg JOIN gifts g ON cg.gift_id = g.id
+      WHERE cg.checkin_id = ?
+    `).bind(r.id).all()
+    return { ...r, sales: sales.results, gifts: gifts.results }
+  }))
+
+  return c.json(ok(records))
+})
+
+// ── GET /api/checkin/history ───────────────────────────────────────────────
 checkin.get('/history', async (c) => {
   const user   = c.get('user')
   const page   = Math.max(1, parseInt(c.req.query('page')  ?? '1'))
-  const limit  = Math.min(50, Math.max(1, parseInt(c.req.query('limit') ?? '10')))
+  const limit  = Math.min(50, Math.max(1, parseInt(c.req.query('limit') ?? '20')))
   const offset = (page - 1) * limit
 
   const records = await c.env.DB.prepare(`
-    SELECT id, date, checkin_time, checkout_time,
-           checkin_address, checkout_address,
-           sales_quantity, notes, status
-    FROM checkins
-    WHERE user_id = ?
-    ORDER BY date DESC
+    SELECT id, date, store_name, checkin_time, checkout_time,
+           checkin_address, checkout_address, sales_quantity, notes, status
+    FROM checkins WHERE user_id = ?
+    ORDER BY date DESC, checkin_time DESC
     LIMIT ? OFFSET ?
   `).bind(user.id, limit, offset).all()
 
@@ -222,26 +281,32 @@ checkin.get('/history', async (c) => {
     'SELECT COUNT(*) as count FROM checkins WHERE user_id = ?'
   ).bind(user.id).first<{ count: number }>()
 
-  return c.json({
-    success: true,
-    data: records.results,
-    pagination: { page, limit, total: total?.count ?? 0 }
-  })
+  return c.json({ success: true, data: records.results, pagination: { page, limit, total: total?.count ?? 0 } })
 })
 
 // ── GET /api/checkin/:id ───────────────────────────────────────────────────
 checkin.get('/:id', async (c) => {
   const user = c.get('user')
   const id   = parseInt(c.req.param('id'))
-
   if (isNaN(id)) return c.json(err('ID không hợp lệ'), 400)
 
   const record = await c.env.DB.prepare(
     'SELECT * FROM checkins WHERE id = ? AND user_id = ?'
   ).bind(id, user.id).first()
-
   if (!record) return c.json(err('Không tìm thấy'), 404)
-  return c.json(ok(record))
+
+  const sales = await c.env.DB.prepare(`
+    SELECT cs.quantity, p.id as product_id, p.name as product_name, p.unit
+    FROM checkin_sales cs JOIN products p ON cs.product_id = p.id
+    WHERE cs.checkin_id = ?
+  `).bind(id).all()
+  const gifts = await c.env.DB.prepare(`
+    SELECT cg.quantity, g.id as gift_id, g.name as gift_name, g.unit
+    FROM checkin_gifts cg JOIN gifts g ON cg.gift_id = g.id
+    WHERE cg.checkin_id = ?
+  `).bind(id).all()
+
+  return c.json(ok({ ...record, sales: sales.results, gifts: gifts.results }))
 })
 
 export default checkin

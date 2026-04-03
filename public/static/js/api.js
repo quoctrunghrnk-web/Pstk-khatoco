@@ -45,6 +45,8 @@ window.API = (() => {
     getToday: () => request('GET', '/checkin/today'),
     getHistory: (page = 1, limit = 10) => request('GET', `/checkin/history?page=${page}&limit=${limit}`),
     getCheckinDetail: (id) => request('GET', `/checkin/${id}`),
+    getProducts: () => request('GET', '/checkin/products'),
+    getGifts: () => request('GET', '/checkin/gifts'),
 
     // Admin - Nhân viên
     // getUsers(params) hoặc getUsers() — params = { province: '...' }
@@ -80,5 +82,17 @@ window.API = (() => {
     // Admin - Quản lý tỉnh/thành hoạt động
     addProvince: (name) => request('POST', '/admin/provinces', { name }),
     deleteProvince: (id) => request('DELETE', `/admin/provinces/${id}`),
+
+    // Admin - Quản lý sản phẩm
+    getAdminProducts: () => request('GET', '/admin/products'),
+    createProduct: (data) => request('POST', '/admin/products', data),
+    updateProduct: (id, data) => request('PATCH', `/admin/products/${id}`, data),
+    deleteProduct: (id) => request('DELETE', `/admin/products/${id}`),
+
+    // Admin - Quản lý quà tặng
+    getAdminGifts: () => request('GET', '/admin/gifts'),
+    createGift: (data) => request('POST', '/admin/gifts', data),
+    updateGift: (id, data) => request('PATCH', `/admin/gifts/${id}`, data),
+    deleteGift: (id) => request('DELETE', `/admin/gifts/${id}`),
   }
 })()
