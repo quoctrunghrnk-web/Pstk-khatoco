@@ -741,198 +741,331 @@ window.AdminModule = (() => {
   }
 
   function buildPrintHTML(records, date, province) {
-    const dateVN = new Date(date + 'T00:00:00+07:00').toLocaleDateString('vi-VN', {
-      weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric'
+    // ── Helpers ──────────────────────────────────────────────────
+    const dateObj = new Date(date + 'T00:00:00+07:00')
+    const dowMap  = ['CHỦ NHẬT','THỨ HAI','THỨ BA','THỨ TƯ','THỨ NĂM','THỨ SÁU','THỨ BẢY']
+    const dow     = dowMap[dateObj.getDay()]
+    const dd      = String(dateObj.getDate()).padStart(2,'0')
+    const mm      = String(dateObj.getMonth()+1).padStart(2,'0')
+    const yyyy    = dateObj.getFullYear()
+    const dateVN  = `${dow}, NGÀY ${dd}/${mm}/${yyyy}`
+
+    const totalSales     = records.reduce((s, r) => s + (parseInt(r.sales_quantity) || 0), 0)
+    const totalStores    = records.length  // mỗi record = 1 lượt check-in tại 1 điểm bán
+    const totalStaff     = new Set(records.map(r => r.username)).size
+
+    const provinceLabel  = province || 'TẤT CẢ KHU VỰC'
+
+    // Ô ảnh: nếu có src thì hiện ảnh, không thì hiện placeholder
+    const photoBox = (src) => src
+      ? `<img src="${src}" class="photo-img" />`
+      : `<div class="photo-empty"></div>`
+
+    // ── Slide 1: Trang bìa / Tổng hợp ──────────────────────────
+    const slide1 = `
+<div class="slide slide-cover">
+  <div class="cover-logo-area">LOGO KHATOCO<br/><span style="font-size:9px;opacity:.6;">(update sau)</span></div>
+  <div class="cover-body">
+    <div class="cover-title">BÁO CÁO NGHIỆM THU</div>
+    <div class="cover-sub">DỰ ÁN PST</div>
+    <div class="cover-region">KHU VỰC: ${provinceLabel}</div>
+    <div class="cover-date">${dateVN}</div>
+    <table class="cover-table">
+      <thead>
+        <tr>
+          <th>NHÂN VIÊN</th>
+          <th>ĐIỂM BÁN</th>
+          <th>TỔNG BÁN (GÓI)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>${totalStaff}</td>
+          <td>${totalStores}</td>
+          <td>${totalSales}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="slide-num">1</div>
+</div>`
+
+    // ── Slides 2+: Mỗi check-in = 1 slide ──────────────────────
+    // Đánh số thứ tự điểm bán liên tục, nhóm theo nhân viên
+    let slideIdx = 2
+    let storeSeq = 0   // số thứ tự điểm bán liên tục toàn báo cáo
+
+    // Nhóm records theo nhân viên để lấy số thứ tự NV
+    const staffOrder = []
+    const staffMap   = {}
+    records.forEach(r => {
+      if (!staffMap[r.username]) {
+        staffOrder.push(r.username)
+        staffMap[r.username] = { seq: staffOrder.length, name: r.full_name, phone: r.username }
+      }
     })
-    const totalSales = records.reduce((s, r) => s + (parseInt(r.sales_quantity) || 0), 0)
-    const done = records.filter(r => r.status === 'checkout').length
 
-    // imgCell: ảnh lớn, chiếm hết chiều rộng nhóm
-    const imgCell = (src, label) => src
-      ? `<div class="img-cell"><span class="img-label">${label}</span><img src="${src}" /></div>`
-      : `<div class="img-cell empty"><span class="img-label">${label}</span><div class="img-empty"><span>Không có ảnh</span></div></div>`
+    const detailSlides = records.map(r => {
+      storeSeq++
+      const staffSeq = staffMap[r.username]?.seq || 0
+      const ci1 = r.checkin_image1  || null
+      const ci2 = r.checkin_image2  || null
+      const co1 = r.checkout_image1 || null
+      const co2 = r.checkout_image2 || null
+      const ac1 = r.activity_image1 || null
+      const ac2 = r.activity_image2 || null
+      const ac3 = r.activity_image3 || null
+      const ac4 = r.activity_image4 || null
 
-    const rows = records.map((r, i) => {
-      const actImgs = [r.activity_image1, r.activity_image2, r.activity_image3, r.activity_image4].filter(Boolean)
-      // Check-in: 2 ảnh, Check-out: 2 ảnh, Hoạt động: 1-4 ảnh
-      const ciImgs  = [r.checkin_image1,  r.checkin_image2 ].filter(Boolean)
-      const coImgs  = [r.checkout_image1, r.checkout_image2].filter(Boolean)
-      return `
-      <div class="staff-block">
-        <!-- Thông tin nhân viên -->
-        <div class="staff-header">
-          <span class="staff-no">${i + 1}</span>
-          <div class="staff-info">
-            <strong>${r.full_name}</strong>
-            <span class="staff-sub">${r.username}${r.province ? ' &nbsp;·&nbsp; ' + r.province : ''}${r.store_name ? ' &nbsp;·&nbsp; 🏪 ' + r.store_name : ''}</span>
-          </div>
-          <span class="status-badge ${r.status === 'checkout' ? 'done' : 'progress'}">
-            ${r.status === 'checkout' ? '✓ Hoàn thành' : '⏳ Đang làm'}
-          </span>
-        </div>
+      const ciTime = r.checkin_time  ? formatTime(r.checkin_time)  : '--:--'
+      const coTime = r.checkout_time ? formatTime(r.checkout_time) : '--:--'
 
-        <!-- Thời gian + doanh số -->
-        <div class="info-row">
-          <div class="info-item">
-            <span class="info-label">🕐 Check-in</span>
-            <span class="info-value">${formatTime(r.checkin_time)}</span>
-          </div>
-          <div class="info-sep"></div>
-          <div class="info-item">
-            <span class="info-label">🕐 Check-out</span>
-            <span class="info-value">${formatTime(r.checkout_time)}</span>
-          </div>
-          <div class="info-sep"></div>
-          <div class="info-item">
-            <span class="info-label">📦 Số bán</span>
-            <span class="info-value sales">${r.sales_quantity != null ? r.sales_quantity + ' SP' : '--'}</span>
-          </div>
-        </div>
+      const html = `
+<div class="slide slide-detail">
+  <!-- Logo góc phải -->
+  <div class="detail-logo-area">LOGO KHATOCO<br/><span style="font-size:7px;opacity:.6;">(update sau)</span></div>
 
-        <!-- Địa chỉ + ghi chú -->
-        ${(r.checkin_address || r.checkout_address || r.notes) ? `
-        <div class="meta-row">
-          ${r.checkin_address  ? `<div class="meta-item"><span class="meta-icon">📍</span><span><b>CI:</b> ${r.checkin_address}</span></div>`  : ''}
-          ${r.checkout_address ? `<div class="meta-item"><span class="meta-icon">📍</span><span><b>CO:</b> ${r.checkout_address}</span></div>` : ''}
-          ${r.notes            ? `<div class="meta-item"><span class="meta-icon">📝</span><span>${r.notes}</span></div>`                        : ''}
-        </div>` : ''}
+  <!-- Header nhân viên -->
+  <div class="detail-seq-badge">${staffSeq}</div>
+  <div class="detail-header">
+    <div class="detail-name">${r.full_name}</div>
+    <div class="detail-phone">${r.username}</div>
+    <div class="detail-store">Điểm bán: <strong>${r.store_name || '--'}</strong>
+      <span class="detail-store-num">${storeSeq}</span>
+    </div>
+    <div class="detail-addr">Địa chỉ: ${r.checkin_address || '--'}</div>
+    <div class="detail-times">
+      <span>Check-in: <b>${ciTime}</b></span>
+      <span style="margin:0 8px;opacity:.4;">|</span>
+      <span>Check-out: <b>${coTime}</b></span>
+      ${r.sales_quantity != null ? `<span style="margin:0 8px;opacity:.4;">|</span><span>Tổng bán: <b style="color:#c0392b;">${r.sales_quantity} gói</b></span>` : ''}
+      ${r.notes ? `<span style="margin:0 8px;opacity:.4;">|</span><span style="color:#6b7280;">Ghi chú: ${r.notes}</span>` : ''}
+    </div>
+  </div>
 
-        <!-- Ảnh: layout dọc theo nhóm, ảnh to dễ nhìn -->
-        <div class="photos-section">
-          <div class="photo-group ${ciImgs.length===0?'no-photo':''}">
-            <div class="photos-title">📷 Ảnh Check-in</div>
-            <div class="photo-grid cols-${Math.min(ciImgs.length||1,2)}">
-              ${ciImgs.length > 0 ? ciImgs.map((s,j)=>imgCell(s,`Check-in ${j+1}`)).join('') : imgCell(null,'Check-in')}
-            </div>
-          </div>
-          ${actImgs.length > 0 ? `
-          <div class="photo-group">
-            <div class="photos-title">🎯 Ảnh hoạt động</div>
-            <div class="photo-grid cols-${Math.min(actImgs.length,2)}">
-              ${actImgs.map((s,j)=>imgCell(s,`Hoạt động ${j+1}`)).join('')}
-            </div>
-          </div>` : ''}
-          <div class="photo-group ${coImgs.length===0?'no-photo':''}">
-            <div class="photos-title">📷 Ảnh Check-out</div>
-            <div class="photo-grid cols-${Math.min(coImgs.length||1,2)}">
-              ${coImgs.length > 0 ? coImgs.map((s,j)=>imgCell(s,`Check-out ${j+1}`)).join('') : imgCell(null,'Check-out')}
-            </div>
-          </div>
-        </div>
-      </div>`
+  <!-- 3 cột ảnh -->
+  <div class="photo-cols">
+    <!-- CHECK IN -->
+    <div class="photo-col">
+      <div class="photo-col-title checkin-title">CHECK IN</div>
+      <div class="photo-2grid">
+        ${photoBox(ci1)}
+        ${photoBox(ci2)}
+      </div>
+      <div class="photo-2grid" style="margin-top:6px;">
+        ${photoBox(co1)}
+        ${photoBox(co2)}
+      </div>
+      <div class="photo-col-title checkout-title" style="margin-top:4px;">CHECK OUT</div>
+    </div>
+
+    <!-- HOẠT ĐỘNG BÁN HÀNG -->
+    <div class="photo-col activity-col">
+      <div class="photo-col-title activity-title">HOẠT ĐỘNG BÁN HÀNG</div>
+      <div class="photo-2grid">
+        ${photoBox(ac1)}
+        ${photoBox(ac2)}
+      </div>
+      <div class="photo-2grid" style="margin-top:6px;">
+        ${photoBox(ac3)}
+        ${photoBox(ac4)}
+      </div>
+    </div>
+  </div>
+
+  <div class="slide-num">${slideIdx++}</div>
+</div>`
+      return html
     }).join('')
 
-    return `<!DOCTYPE html><html lang="vi"><head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Báo cáo ${date}${province ? ' - ' + province : ''}</title>
-<style>
-/* ── Reset ── */
+    // ── CSS ──────────────────────────────────────────────────────
+    const css = `
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#1a1a1a;background:#f4f6f8;}
+body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
 
-/* ── Page header ── */
-.page-header{background:linear-gradient(135deg,#c0392b 0%,#7f1d1d 100%);color:#fff;padding:20px 28px 16px;margin-bottom:0;}
-.hdr-top{display:flex;align-items:center;gap:16px;margin-bottom:14px;}
-.hdr-logo-wrap{background:#fff;border-radius:14px;padding:8px;flex-shrink:0;box-shadow:0 3px 12px rgba(0,0,0,.25);}
-.hdr-logo{width:60px;height:60px;object-fit:contain;display:block;}
-.hdr-brand{flex:1;}
-.hdr-company{font-size:10px;opacity:.75;letter-spacing:.8px;text-transform:uppercase;margin-bottom:3px;}
-.hdr-title{font-size:22px;font-weight:800;line-height:1.15;margin-bottom:4px;}
-.hdr-sub{font-size:12px;opacity:.88;}
-.hdr-stats{display:flex;gap:12px;}
-.stat-box{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.25);border-radius:12px;padding:10px 20px;text-align:center;min-width:100px;}
-.stat-label{font-size:9px;opacity:.78;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;}
-.stat-val{font-size:22px;font-weight:800;display:block;}
+/* ── Slide container ── */
+.slide{
+  width:337mm; height:190mm;       /* 33.87cm × 19.05cm → landscape A4 */
+  background:#fff;
+  position:relative;
+  overflow:hidden;
+  margin:0 auto 8mm;
+  page-break-after:always;
+  break-after:page;
+  box-shadow:0 2px 12px rgba(0,0,0,.15);
+}
 
-/* ── Staff block ── */
-.staff-block{background:#fff;border-radius:14px;margin:14px 14px 0;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);page-break-inside:avoid;}
-.staff-header{display:flex;align-items:center;gap:12px;background:linear-gradient(90deg,#fff5f5,#fff);padding:12px 16px;border-bottom:2px solid #fef2f2;}
-.staff-no{width:32px;height:32px;background:#c0392b;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;}
-.staff-info{flex:1;}
-.staff-info strong{font-size:14px;display:block;color:#111;font-weight:700;}
-.staff-sub{font-size:11px;color:#6b7280;margin-top:2px;}
-.status-badge{font-size:11px;padding:4px 12px;border-radius:20px;font-weight:700;white-space:nowrap;}
-.status-badge.done{background:#dcfce7;color:#166534;border:1px solid #86efac;}
-.status-badge.progress{background:#fef9c3;color:#854d0e;border:1px solid #fde047;}
+/* ══════════════════════════════════════════
+   SLIDE 1 – Trang bìa
+══════════════════════════════════════════ */
+.slide-cover{
+  display:flex;
+  flex-direction:column;
+  padding:12mm 14mm 10mm;
+}
+.cover-logo-area{
+  position:absolute;
+  top:8mm;right:10mm;
+  width:38mm;height:28mm;
+  background:#f3f3f3;
+  border:1px dashed #bbb;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  font-size:9px;font-weight:700;text-align:center;color:#555;
+  border-radius:4px;
+}
+.cover-body{
+  flex:1;
+  display:flex;flex-direction:column;justify-content:flex-start;
+  padding-right:50mm;
+}
+.cover-title{
+  font-size:26pt;font-weight:900;color:#C00000;
+  line-height:1.1;margin-bottom:3mm;margin-top:5mm;
+}
+.cover-sub{font-size:26pt;font-weight:900;color:#C00000;line-height:1.1;margin-bottom:3mm;}
+.cover-region{font-size:26pt;font-weight:900;color:#C00000;line-height:1.1;margin-bottom:3mm;}
+.cover-date{font-size:26pt;font-weight:900;color:#C00000;line-height:1.1;margin-bottom:6mm;}
 
-/* ── Info row ── */
-.info-row{display:flex;align-items:stretch;padding:0;border-bottom:1px solid #f0f0f0;}
-.info-item{flex:1;text-align:center;padding:12px 8px;}
-.info-sep{width:1px;background:#f0f0f0;}
-.info-label{font-size:9px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px;}
-.info-value{font-size:17px;font-weight:700;color:#1f2937;display:block;}
-.info-value.sales{color:#059669;}
+.cover-table{
+  width:200mm;
+  border-collapse:collapse;
+  font-size:13pt;
+}
+.cover-table th{
+  background:#C00000;color:#fff;
+  padding:4mm 8mm;
+  text-align:center;
+  font-weight:700;
+  border:1px solid #a00000;
+}
+.cover-table td{
+  padding:5mm 8mm;
+  text-align:center;
+  font-size:18pt;
+  font-weight:700;
+  border:1px solid #ddd;
+  background:#fff5f5;
+}
 
-/* ── Meta (address/notes) ── */
-.meta-row{padding:8px 16px 6px;border-bottom:1px solid #f0f0f0;background:#fafafa;}
-.meta-item{display:flex;align-items:baseline;gap:6px;font-size:10px;color:#4b5563;line-height:1.6;margin-bottom:2px;}
-.meta-icon{flex-shrink:0;}
+/* ══════════════════════════════════════════
+   SLIDE 2+ – Chi tiết check-in
+══════════════════════════════════════════ */
+.slide-detail{
+  padding:4mm 5mm 4mm;
+}
+.detail-logo-area{
+  position:absolute;
+  top:4mm;right:5mm;
+  width:32mm;height:22mm;
+  background:#f3f3f3;
+  border:1px dashed #bbb;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  font-size:8px;font-weight:700;text-align:center;color:#555;
+  border-radius:4px;
+}
+.detail-seq-badge{
+  position:absolute;
+  top:4mm;left:4mm;
+  width:7mm;height:7mm;
+  background:#C00000;color:#fff;
+  border-radius:2px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11pt;font-weight:900;
+}
+.detail-header{
+  margin-left:12mm;
+  padding-right:40mm;
+  margin-bottom:2mm;
+}
+.detail-name{font-size:12pt;font-weight:900;line-height:1.2;}
+.detail-phone{font-size:10pt;font-weight:700;color:#333;line-height:1.3;}
+.detail-store{font-size:10pt;font-weight:700;line-height:1.3;display:flex;align-items:center;gap:4px;}
+.detail-store-num{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:5mm;height:5mm;background:#C00000;color:#fff;
+  border-radius:50%;font-size:7pt;font-weight:800;margin-left:2mm;
+}
+.detail-addr{font-size:9pt;color:#444;line-height:1.3;}
+.detail-times{font-size:9pt;color:#333;margin-top:1mm;line-height:1.4;}
 
-/* ── Photos - layout dọc theo nhóm, ảnh to ── */
-.photos-section{padding:14px 16px 16px;}
-.photo-group{margin-bottom:14px;}
-.photo-group:last-child{margin-bottom:0;}
-.photos-title{font-size:10px;color:#374151;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #f3f4f6;display:flex;align-items:center;gap:6px;}
-.photo-grid{display:grid;gap:8px;}
-.photo-grid.cols-1{grid-template-columns:1fr;}
-.photo-grid.cols-2{grid-template-columns:1fr 1fr;}
-.img-cell{display:flex;flex-direction:column;}
-.img-label{font-size:9px;color:#9ca3af;margin-bottom:3px;display:block;}
-.img-cell img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb;display:block;box-shadow:0 1px 4px rgba(0,0,0,.08);}
-.img-empty{width:100%;aspect-ratio:4/3;background:#f9fafb;border-radius:10px;border:2px dashed #d1d5db;display:flex;align-items:center;justify-content:center;}
-.img-empty span{font-size:9px;color:#d1d5db;}
-.photo-group.no-photo .photo-grid{opacity:.35;}
+/* ── 3-column photo layout ── */
+.photo-cols{
+  display:grid;
+  grid-template-columns:1fr 1fr;   /* LEFT: CI+CO | RIGHT: Activity */
+  gap:5mm;
+  height:128mm;   /* chiếm phần còn lại của slide sau header */
+  margin-top:1mm;
+}
+.photo-col{
+  display:flex;flex-direction:column;
+}
+.photo-col-title{
+  font-size:9pt;font-weight:800;
+  margin-bottom:2mm;
+  text-transform:uppercase;
+  letter-spacing:.3px;
+}
+.checkin-title{ color:#C00000; }
+.checkout-title{ color:#C00000; margin-top:auto; }
+.activity-title{ color:#C00000; }
 
-/* ── Footer ── */
-.page-footer{display:flex;align-items:center;justify-content:center;gap:12px;padding:16px 28px;margin:14px 14px 0;background:#fff;border-radius:14px 14px 0 0;border-top:3px solid #c0392b;font-size:11px;color:#6b7280;}
-.footer-logo-wrap{background:#fff5f5;border-radius:9px;border:1px solid #fecaca;padding:5px;}
-.footer-logo{width:32px;height:32px;object-fit:contain;display:block;}
-.footer-text{line-height:1.7;}
-.footer-text strong{color:#c0392b;}
+.photo-2grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:3mm;
+  flex:1;
+}
+.activity-col .photo-2grid{
+  flex:1;
+}
+
+.photo-img{
+  width:100%;height:100%;
+  object-fit:cover;
+  border-radius:3px;
+  border:1px solid #ddd;
+  display:block;
+}
+.photo-empty{
+  width:100%;height:100%;
+  background:#f5f5f5;
+  border:1.5px dashed #ccc;
+  border-radius:3px;
+  min-height:40mm;
+}
+
+/* ── Page number ── */
+.slide-num{
+  position:absolute;
+  bottom:3mm;right:5mm;
+  font-size:8pt;color:#888;
+}
 
 /* ── Print ── */
 @media print{
   body{background:#fff;}
-  @page{margin:10mm 10mm 12mm;size:A4 portrait;}
-  .staff-block{page-break-inside:avoid;break-inside:avoid;margin:10px 0 0;}
-  .page-footer{margin:10px 0 0;}
-}
-</style></head><body>
+  @page{
+    size:337mm 190mm landscape;
+    margin:0;
+  }
+  .slide{
+    width:337mm;height:190mm;
+    margin:0;
+    box-shadow:none;
+    page-break-after:always;
+    break-after:page;
+  }
+}`
 
-<!-- Header -->
-<div class="page-header">
-  <div class="hdr-top">
-    <div class="hdr-logo-wrap">
-      <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt" class="hdr-logo" />
-    </div>
-    <div class="hdr-brand">
-      <div class="hdr-company">Nhân Kiệt · nhankiet.vn</div>
-      <div class="hdr-title">Báo cáo chấm công nhân viên</div>
-      <div class="hdr-sub">${dateVN}${province ? ' &nbsp;·&nbsp; ' + province : ' &nbsp;·&nbsp; Tất cả tỉnh/thành'}</div>
-    </div>
-  </div>
-  <div class="hdr-stats">
-    <div class="stat-box"><span class="stat-label">Nhân viên</span><span class="stat-val">${records.length}</span></div>
-    <div class="stat-box"><span class="stat-label">Hoàn thành</span><span class="stat-val">${done}</span></div>
-    <div class="stat-box"><span class="stat-label">Tổng bán</span><span class="stat-val">${totalSales}<small style="font-size:12px;font-weight:600;opacity:.8"> SP</small></span></div>
-    <div class="stat-box"><span class="stat-label">Tỷ lệ HT</span><span class="stat-val">${records.length > 0 ? Math.round(done/records.length*100) : 0}<small style="font-size:12px;font-weight:600;opacity:.8">%</small></span></div>
-  </div>
-</div>
-
-${rows || '<div style="text-align:center;padding:60px;color:#9ca3af;font-size:14px;">Không có dữ liệu trong ngày này</div>'}
-
-<!-- Footer -->
-<div class="page-footer">
-  <div class="footer-logo-wrap">
-    <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt" class="footer-logo" />
-  </div>
-  <div class="footer-text">
-    Phát triển bởi <strong>nhankiet.vn</strong> &nbsp;·&nbsp; © 2026 Nhân Kiệt. All rights reserved.
-    <br/><span style="font-size:9px;color:#9ca3af;">Báo cáo tạo lúc ${new Date().toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})}</span>
-  </div>
-</div>
-
+    return `<!DOCTYPE html><html lang="vi"><head>
+<meta charset="UTF-8">
+<title>Báo cáo nghiệm thu PST – ${dateVN}${province ? ' – ' + province : ''}</title>
+<style>${css}</style>
+</head><body>
+${slide1}
+${detailSlides || '<div style="text-align:center;padding:40px;color:#aaa;">Không có dữ liệu</div>'}
 </body></html>`
   }
 

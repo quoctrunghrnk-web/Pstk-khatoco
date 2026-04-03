@@ -190,7 +190,12 @@ window.CheckinModule = (() => {
 
   // ── Kiểm tra hồ sơ trước check-in ─────────────
   function checkProfileBeforeCheckin() {
-    if (!_profileData) return true // chưa load xong, cho qua
+    if (!_profileData) {
+      // Profile chưa load được → chặn và yêu cầu cập nhật hồ sơ
+      Toast.error('Không tải được hồ sơ. Vui lòng vào tab Hồ sơ để cập nhật trước khi check-in.')
+      setTimeout(() => App.navigate('profile'), 1500)
+      return false
+    }
     const missing = ProfileModule.getMissingFields(_profileData)
     if (missing.length === 0) return true
     // Hiển thị modal thông báo và chuyển sang hồ sơ
@@ -220,6 +225,8 @@ window.CheckinModule = (() => {
 
   // ── Check-in flow ────────────────────────────
   async function doCheckin() {
+    console.log('[Checkin] doCheckin called, _profileData=', _profileData)
+    console.log('[Checkin] missing=', _profileData ? ProfileModule.getMissingFields(_profileData) : 'NO_PROFILE')
     if (!checkProfileBeforeCheckin()) return
     await fetchGeo('blue')
 
@@ -891,7 +898,11 @@ window.CheckinModule = (() => {
     // Load profile để kiểm tra hồ sơ
     try {
       _profileData = await ProfileModule.loadProfile()
-    } catch { _profileData = null }
+      console.log('[Checkin] profileData loaded:', _profileData)
+    } catch (e) {
+      console.error('[Checkin] loadProfile error:', e)
+      _profileData = null
+    }
     updateProfileWarnBanner()
 
     // Load parallel
