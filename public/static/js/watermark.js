@@ -181,51 +181,28 @@ window.Watermark = (() => {
         ctx.roundRect(lbX, lbY, totalBadgeW, lbH, 6)
         ctx.fill()
 
-        // Vẽ logo Nhân Kiệt (load từ URL, dùng cache nếu có)
+        // Vẽ brand text + NK badge (không dùng ảnh ngoài để tránh canvas tainted)
         const _drawBrand = () => {
           ctx.fillStyle = '#FFFFFF'
           ctx.textBaseline = 'middle'
           ctx.shadowBlur = 1
+          // Vẽ chữ "NK" trong ô vuông nhỏ bên trái badge
+          ctx.fillStyle = 'rgba(255,255,255,0.95)'
+          ctx.font = `bold ${Math.floor(labelFs * 0.85)}px Arial`
+          ctx.fillText('NK', lbX + logoSize * 0.15, lbY + lbH / 2)
+          // Vẽ brand text
+          ctx.font = `bold ${labelFs}px Arial`
           ctx.fillText(brandText, lbX + logoSize + Math.floor(lbPad * 0.5) + lbPad * 0.5, lbY + lbH / 2, brandW + 4)
           ctx.shadowBlur = 0
-          resolve(canvas.toDataURL('image/jpeg', APP_CONFIG.IMG_QUALITY))
+          try {
+            resolve(canvas.toDataURL('image/jpeg', APP_CONFIG.IMG_QUALITY))
+          } catch (e) {
+            // Fallback nếu canvas bị tainted: trả về ảnh gốc không watermark
+            resolve(base64)
+          }
         }
 
-        // Thử load logo, nếu lỗi vẽ text thay thế
-        const logoImg = new Image()
-        logoImg.crossOrigin = 'anonymous'
-        logoImg.onload = () => {
-          // Clip vùng logo bo góc
-          ctx.save()
-          const lr = 4
-          ctx.beginPath()
-          ctx.moveTo(lbX + lr, lbY)
-          ctx.lineTo(lbX + logoSize - lr, lbY)
-          ctx.quadraticCurveTo(lbX + logoSize, lbY, lbX + logoSize, lbY + lr)
-          ctx.lineTo(lbX + logoSize, lbY + lbH - lr)
-          ctx.quadraticCurveTo(lbX + logoSize, lbY + lbH, lbX + logoSize - lr, lbY + lbH)
-          ctx.lineTo(lbX + lr, lbY + lbH)
-          ctx.quadraticCurveTo(lbX, lbY + lbH, lbX, lbY + lbH - lr)
-          ctx.lineTo(lbX, lbY + lr)
-          ctx.quadraticCurveTo(lbX, lbY, lbX + lr, lbY)
-          ctx.closePath()
-          ctx.clip()
-          ctx.drawImage(logoImg, lbX, lbY, logoSize, lbH)
-          ctx.restore()
-          _drawBrand()
-        }
-        logoImg.onerror = () => {
-          // Fallback: vẽ chữ NK thay logo
-          ctx.fillStyle = 'rgba(255,255,255,0.9)'
-          ctx.font = `bold ${Math.floor(labelFs * 0.85)}px Arial`
-          ctx.textBaseline = 'middle'
-          ctx.fillText('NK', lbX + logoSize * 0.15, lbY + lbH / 2)
-          _drawBrand()
-        }
-        logoImg.src = 'https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg'
-
-        // (resolve sẽ được gọi trong _drawBrand sau khi logo load xong)
-        return   // chờ logo load, không resolve ngay
+        _drawBrand()
       }
       img.onerror = () => resolve(base64)
       img.src = base64
