@@ -8,6 +8,7 @@ window.CheckinModule = (() => {
   let _products      = []      // Danh sách sản phẩm
   let _gifts         = []      // Danh sách quà tặng
   let _activityGrids = {}      // { checkin_id: photoGrid } map
+  let _profileData   = null    // Dữ liệu hồ sơ nhân viên
 
   // ── Helpers ─────────────────────────────────
   function formatTime(isoStr) {
@@ -52,6 +53,9 @@ window.CheckinModule = (() => {
       <div class="h-1 bg-gradient-to-r from-green-500 to-emerald-400"></div>
 
       <div class="px-4 mt-4 space-y-3 max-w-lg mx-auto">
+
+        <!-- Cảnh báo hồ sơ chưa đầy đủ -->
+        <div id="ci-profile-warn" class="hidden"></div>
 
         <!-- Nút Check-in mới -->
         <div id="ci-new-btn-area">
@@ -184,8 +188,39 @@ window.CheckinModule = (() => {
     }))
   }
 
+  // ── Kiểm tra hồ sơ trước check-in ─────────────
+  function checkProfileBeforeCheckin() {
+    if (!_profileData) return true // chưa load xong, cho qua
+    const missing = ProfileModule.getMissingFields(_profileData)
+    if (missing.length === 0) return true
+    // Hiển thị modal thông báo và chuyển sang hồ sơ
+    const { close } = Modal.create(`
+      <div class="p-5 text-center">
+        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+          <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-bold text-gray-800 mb-2">Hồ sơ chưa đầy đủ</h3>
+        <p class="text-sm text-gray-500 mb-4">Bạn cần bổ sung đầy đủ thông tin hồ sơ trước khi check-in.</p>
+        <div class="bg-red-50 rounded-xl p-3 mb-4 text-left">
+          <p class="text-xs font-semibold text-red-600 mb-2">Thiếu thông tin:</p>
+          ${missing.map(f => `<div class="flex items-center gap-1.5 text-xs text-red-700"><i class="fas fa-times-circle text-red-400 flex-shrink-0"></i><span>${f}</span></div>`).join('')}
+        </div>
+        <div class="flex gap-3">
+          <button id="ci-warn-cancel" class="flex-1 py-2.5 border rounded-xl text-gray-600 text-sm">Đóng</button>
+          <button id="ci-warn-go-profile" class="flex-1 py-2.5 bg-red-600 text-white rounded-xl font-semibold text-sm">
+            <i class="fas fa-user-edit mr-1"></i>Cập nhật hồ sơ
+          </button>
+        </div>
+      </div>
+    `)
+    document.getElementById('ci-warn-cancel').onclick = close
+    document.getElementById('ci-warn-go-profile').onclick = () => { close(); App.navigate('profile') }
+    return false
+  }
+
   // ── Check-in flow ────────────────────────────
   async function doCheckin() {
+    if (!checkProfileBeforeCheckin()) return
     await fetchGeo('blue')
 
     const { close: closeModal } = Modal.create(`
@@ -811,6 +846,33 @@ window.CheckinModule = (() => {
     setInterval(tick, 1000)
   }
 
+  // ── Cập nhật banner cảnh báo hồ sơ ───────────
+  function updateProfileWarnBanner() {
+    const warnEl = document.getElementById('ci-profile-warn')
+    if (!warnEl) return
+    if (!_profileData) { warnEl.classList.add('hidden'); return }
+    const missing = ProfileModule.getMissingFields(_profileData)
+    if (missing.length === 0) {
+      warnEl.classList.add('hidden')
+    } else {
+      warnEl.classList.remove('hidden')
+      warnEl.innerHTML = `
+        <div class="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 cursor-pointer"
+             onclick="App.navigate('profile')">
+          <div class="flex items-start gap-3">
+            <i class="fas fa-exclamation-triangle text-red-500 text-xl flex-shrink-0 mt-0.5"></i>
+            <div class="flex-1">
+              <p class="text-sm font-bold text-red-700">Hồ sơ chưa đầy đủ – Chưa thể check-in</p>
+              <p class="text-xs text-red-500 mt-0.5">Còn thiếu: ${missing.join(', ')}</p>
+              <p class="text-xs text-red-400 mt-1 flex items-center gap-1">
+                <i class="fas fa-arrow-right"></i> Nhấn vào đây để cập nhật hồ sơ
+              </p>
+            </div>
+          </div>
+        </div>`
+    }
+  }
+
   // ── bindEvents ───────────────────────────────
   async function bindEvents() {
     _activityGrids = {}
@@ -825,6 +887,12 @@ window.CheckinModule = (() => {
     }
 
     startLiveClock()
+
+    // Load profile để kiểm tra hồ sơ
+    try {
+      _profileData = await ProfileModule.loadProfile()
+    } catch { _profileData = null }
+    updateProfileWarnBanner()
 
     // Load parallel
     await Promise.all([loadProductsGifts(), refreshToday()])

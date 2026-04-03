@@ -1,16 +1,41 @@
 // =============================================
 // Module: Profile
-// Xem và cập nhật thông tin cá nhân, CCCD, ngân hàng
+// Xem và cập nhật thông tin cá nhân, CCCD, ngân hàng, ngày nhận việc
 // =============================================
 window.ProfileModule = (() => {
 
   let _profileData = null
-  let _activeProvinces = []  // cache danh sách tỉnh từ API
+  let _activeProvinces = []
 
   async function loadProfile() {
     const res = await API.getProfile()
     _profileData = res.data
     return _profileData
+  }
+
+  // ── Kiểm tra hồ sơ đầy đủ ────────────────────
+  // Trả về mảng các trường còn thiếu
+  function getMissingFields(data) {
+    if (!data) return ['Chưa tải được hồ sơ']
+    const missing = []
+    if (!data.province)              missing.push('Khu vực làm việc')
+    if (!data.phone)                 missing.push('Số điện thoại')
+    if (!data.cccd_number)           missing.push('Số CCCD')
+    if (!data.cccd_full_name)        missing.push('Họ tên trên CCCD')
+    if (!data.cccd_dob)              missing.push('Ngày sinh')
+    if (!data.cccd_address)          missing.push('Địa chỉ thường trú')
+    if (!data.cccd_issue_date)       missing.push('Ngày cấp CCCD')
+    if (!data.cccd_issue_place)      missing.push('Nơi cấp CCCD')
+    if (!data.bank_account_number)   missing.push('Số tài khoản ngân hàng')
+    if (!data.bank_name)             missing.push('Tên ngân hàng')
+    if (!data.bank_account_name)     missing.push('Chủ tài khoản')
+    if (!data.start_date)            missing.push('Ngày nhận việc')
+    return missing
+  }
+
+  // Hàm public để checkin.js gọi
+  function isProfileComplete(data) {
+    return getMissingFields(data || _profileData).length === 0
   }
 
   function renderPage() {
@@ -32,7 +57,7 @@ window.ProfileModule = (() => {
       </div>
       <div class="h-1 bg-gradient-to-r from-blue-500 to-indigo-400"></div>
 
-      <!-- Content cards -->
+      <!-- Content -->
       <div class="px-4 mt-4 space-y-3 max-w-lg mx-auto">
 
         <div id="profile-loading" class="bg-white rounded-2xl p-4 shadow flex items-center justify-center h-32">
@@ -41,11 +66,26 @@ window.ProfileModule = (() => {
 
         <div id="profile-content" class="hidden space-y-3">
 
+          <!-- ⚠️ Banner hồ sơ chưa đầy đủ -->
+          <div id="profile-incomplete-banner" class="hidden bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl p-4 shadow-md text-white">
+            <div class="flex items-start gap-3">
+              <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                <i class="fas fa-exclamation-triangle text-lg"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-bold text-sm mb-1">⚠️ Hồ sơ chưa hoàn chỉnh</p>
+                <p class="text-xs text-white/90 mb-2">Cần bổ sung đầy đủ thông tin để sử dụng chức năng Check-in:</p>
+                <div id="missing-fields-list" class="space-y-1"></div>
+              </div>
+            </div>
+          </div>
+
           <!-- Khu vực làm việc -->
           <div id="province-card" class="bg-white rounded-2xl shadow-md border border-indigo-50 overflow-hidden">
             <div class="bg-gradient-to-r from-indigo-500 to-blue-500 px-4 py-3 flex items-center justify-between">
               <h3 class="font-bold text-white flex items-center gap-2 text-sm">
                 <i class="fas fa-map-marker-alt"></i> Khu vực làm việc
+                <span id="province-status-icon"></span>
               </h3>
               <button id="btn-edit-province" class="text-white/80 hover:text-white text-xs font-medium bg-white/20 hover:bg-white/30 px-2 py-1 rounded-lg transition-colors">
                 <i class="fas fa-edit mr-1"></i>Sửa
@@ -54,11 +94,26 @@ window.ProfileModule = (() => {
             <div id="province-info" class="p-4"></div>
           </div>
 
+          <!-- Thông tin nhận việc -->
+          <div class="bg-white rounded-2xl shadow-md border border-rose-50 overflow-hidden">
+            <div class="bg-gradient-to-r from-rose-500 to-pink-500 px-4 py-3 flex items-center justify-between">
+              <h3 class="font-bold text-white flex items-center gap-2 text-sm">
+                <i class="fas fa-briefcase"></i> Thông tin nhận việc
+                <span id="work-status-icon"></span>
+              </h3>
+              <button id="btn-edit-work" class="text-white/80 hover:text-white text-xs font-medium bg-white/20 hover:bg-white/30 px-2 py-1 rounded-lg transition-colors">
+                <i class="fas fa-edit mr-1"></i>Sửa
+              </button>
+            </div>
+            <div id="work-info" class="p-4 space-y-2"></div>
+          </div>
+
           <!-- CCCD -->
           <div class="bg-white rounded-2xl shadow-md border border-blue-50 overflow-hidden">
             <div class="bg-gradient-to-r from-blue-500 to-cyan-500 px-4 py-3 flex items-center justify-between">
               <h3 class="font-bold text-white flex items-center gap-2 text-sm">
-                <i class="fas fa-id-card"></i> Thông tin CCCD
+                <i class="fas fa-id-card"></i> Thông tin CCCD / CMND
+                <span id="cccd-status-icon"></span>
               </h3>
               <button id="btn-edit-cccd" class="text-white/80 hover:text-white text-xs font-medium bg-white/20 hover:bg-white/30 px-2 py-1 rounded-lg transition-colors">
                 <i class="fas fa-edit mr-1"></i>Sửa
@@ -102,6 +157,7 @@ window.ProfileModule = (() => {
             <div class="bg-gradient-to-r from-emerald-500 to-green-500 px-4 py-3 flex items-center justify-between">
               <h3 class="font-bold text-white flex items-center gap-2 text-sm">
                 <i class="fas fa-university"></i> Thông tin ngân hàng
+                <span id="bank-status-icon"></span>
               </h3>
               <button id="btn-edit-bank" class="text-white/80 hover:text-white text-xs font-medium bg-white/20 hover:bg-white/30 px-2 py-1 rounded-lg transition-colors">
                 <i class="fas fa-edit mr-1"></i>Sửa
@@ -128,25 +184,40 @@ window.ProfileModule = (() => {
               </button>
             </div>
           </div>
+
         </div>
       </div>
     </div>
     `
   }
 
-  function renderInfoRow(label, value) {
+  // ── Row hiển thị thông tin ────────────────────
+  function renderInfoRow(label, value, required = false) {
+    const isEmpty = !value
+    const display = isEmpty
+      ? `<span class="${required ? 'text-red-400 font-semibold' : 'text-gray-300 italic'} text-xs">${required ? '⚠ Chưa cập nhật (bắt buộc)' : 'Chưa cập nhật'}</span>`
+      : `<span class="text-gray-800 text-sm font-medium flex-1 break-all">${value}</span>`
     return `
-    <div class="flex items-start gap-2 py-1.5 border-b border-blue-50 last:border-0">
-      <span class="text-blue-400 text-xs font-semibold uppercase tracking-wide w-28 flex-shrink-0 mt-0.5">${label}</span>
-      <span class="text-gray-800 text-sm font-medium flex-1 break-all">${value || '<span class="text-gray-300 italic text-xs">Chưa cập nhật</span>'}</span>
+    <div class="flex items-start gap-2 py-1.5 border-b border-gray-100 last:border-0">
+      <span class="text-blue-400 text-xs font-semibold uppercase tracking-wide w-32 flex-shrink-0 mt-0.5">
+        ${label}${required ? ' <span class="text-red-400">*</span>' : ''}
+      </span>
+      ${display}
     </div>`
   }
 
+  // ── Cập nhật UI sau khi load data ─────────────
   function populateProfileUI(data) {
     if (!data) return
 
-    // Province info
+    // Status icons: ✅ nếu đủ, ⚠️ nếu thiếu
+    const ok  = `<span class="ml-1 text-xs bg-green-400/30 text-green-100 px-1.5 py-0.5 rounded-full">✓ Đầy đủ</span>`
+    const bad = `<span class="ml-1 text-xs bg-red-400/30 text-red-100 px-1.5 py-0.5 rounded-full">⚠ Chưa đủ</span>`
+
+    // Province
+    const provinceOk = !!data.province
     const provinceEl = document.getElementById('province-info')
+    document.getElementById('province-status-icon').innerHTML = provinceOk ? ok : bad
     if (provinceEl) {
       provinceEl.innerHTML = data.province
         ? `<div class="flex items-center gap-3 bg-indigo-50 rounded-xl px-3 py-2.5 border border-indigo-100">
@@ -155,32 +226,46 @@ window.ProfileModule = (() => {
              </div>
              <span class="text-indigo-800 font-bold text-sm">${data.province}</span>
            </div>`
-        : `<p class="text-gray-400 text-sm italic text-center py-2">Chưa cập nhật tỉnh/thành phố</p>`
+        : `<p class="text-red-400 text-sm font-semibold text-center py-2">⚠ Chưa cập nhật — bắt buộc để check-in</p>`
     }
 
+    // Work info (ngày nhận việc + SĐT)
+    const workOk = !!(data.start_date && data.phone)
+    document.getElementById('work-status-icon').innerHTML = workOk ? ok : bad
+    document.getElementById('work-info').innerHTML = [
+      renderInfoRow('Họ và tên', data.full_name, false),
+      renderInfoRow('Số điện thoại', data.phone, true),
+      renderInfoRow('Ngày nhận việc', data.start_date ? formatDateVN(data.start_date) : '', true),
+    ].join('')
+
     // CCCD info
+    const cccdFields = [data.cccd_number, data.cccd_full_name, data.cccd_dob,
+      data.cccd_address, data.cccd_issue_date, data.cccd_issue_place]
+    const cccdOk = cccdFields.every(Boolean)
+    document.getElementById('cccd-status-icon').innerHTML = cccdOk ? ok : bad
     document.getElementById('cccd-info').innerHTML = [
-      renderInfoRow('Số CCCD', data.cccd_number),
-      renderInfoRow('Họ và tên', data.cccd_full_name),
-      renderInfoRow('Ngày sinh', data.cccd_dob),
-      renderInfoRow('Giới tính', data.cccd_gender),
-      renderInfoRow('Địa chỉ', data.cccd_address),
-      renderInfoRow('Ngày cấp', data.cccd_issue_date),
-      renderInfoRow('Nơi cấp', data.cccd_issue_place),
-      renderInfoRow('Ngày hết hạn', data.cccd_expiry_date),
-      renderInfoRow('SĐT', data.phone),
+      renderInfoRow('Số CCCD', data.cccd_number, true),
+      renderInfoRow('Họ và tên', data.cccd_full_name, true),
+      renderInfoRow('Ngày sinh', data.cccd_dob ? formatDateVN(data.cccd_dob) : '', true),
+      renderInfoRow('Giới tính', data.cccd_gender, false),
+      renderInfoRow('Thường trú', data.cccd_address, true),
+      renderInfoRow('Ngày cấp', data.cccd_issue_date ? formatDateVN(data.cccd_issue_date) : '', true),
+      renderInfoRow('Nơi cấp', data.cccd_issue_place, true),
+      renderInfoRow('Hết hạn', data.cccd_expiry_date ? formatDateVN(data.cccd_expiry_date) : '', false),
     ].join('')
 
     // Bank info
+    const bankOk = !!(data.bank_account_number && data.bank_name && data.bank_account_name)
+    document.getElementById('bank-status-icon').innerHTML = bankOk ? ok : bad
     document.getElementById('bank-info').innerHTML = [
-      renderInfoRow('Ngân hàng', data.bank_name),
-      renderInfoRow('Số tài khoản', data.bank_account_number),
-      renderInfoRow('Tên chủ TK', data.bank_account_name),
+      renderInfoRow('Ngân hàng', data.bank_name, true),
+      renderInfoRow('Số tài khoản', data.bank_account_number, true),
+      renderInfoRow('Chủ tài khoản', data.bank_account_name, true),
     ].join('')
 
     // CCCD images
     const frontEl = document.getElementById('cccd-front-preview')
-    const backEl = document.getElementById('cccd-back-preview')
+    const backEl  = document.getElementById('cccd-back-preview')
     if (data.cccd_front_image) {
       frontEl.innerHTML = `<img src="${data.cccd_front_image}" class="w-full h-full object-cover" />`
       frontEl.classList.remove('border-dashed')
@@ -189,17 +274,43 @@ window.ProfileModule = (() => {
       backEl.innerHTML = `<img src="${data.cccd_back_image}" class="w-full h-full object-cover" />`
       backEl.classList.remove('border-dashed')
     }
+
+    // Banner cảnh báo thiếu hồ sơ
+    const missing = getMissingFields(data)
+    const bannerEl = document.getElementById('profile-incomplete-banner')
+    if (missing.length > 0) {
+      bannerEl.classList.remove('hidden')
+      document.getElementById('missing-fields-list').innerHTML = missing.map(f =>
+        `<div class="flex items-center gap-1.5 text-xs text-white/95">
+           <i class="fas fa-times-circle text-red-200 flex-shrink-0"></i>
+           <span>${f}</span>
+         </div>`
+      ).join('')
+    } else {
+      bannerEl.classList.add('hidden')
+    }
   }
 
+  // ── Format date YYYY-MM-DD → DD/MM/YYYY ───────
+  function formatDateVN(d) {
+    if (!d) return ''
+    const s = String(d).slice(0, 10)
+    const [y, m, dd] = s.split('-')
+    if (!y || !m || !dd) return d
+    return `${dd}/${m}/${y}`
+  }
+
+  // ── Modal khu vực ─────────────────────────────
   async function showEditProvinceModal(data) {
-    // Luôn gọi API lấy danh sách mới nhất
     const { close } = Modal.create(`
       <div class="p-5">
         <h3 class="text-lg font-bold text-gray-800 mb-4">
           <i class="fas fa-map-marker-alt mr-2 text-indigo-600"></i>Khu vực làm việc
         </h3>
         <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Tỉnh/Thành phố</label>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Tỉnh/Thành phố <span class="text-red-500">*</span>
+          </label>
           <div class="relative">
             <select id="province-select"
               class="w-full pl-3 pr-8 py-2.5 border border-gray-300 rounded-xl text-sm
@@ -216,64 +327,94 @@ window.ProfileModule = (() => {
         </div>
       </div>
     `)
-
-    // Load danh sách tỉnh sau khi modal mở
     try {
       const res = await API.getActiveProvinces()
       _activeProvinces = res.data || []
-    } catch {
-      _activeProvinces = []
-    }
+    } catch { _activeProvinces = [] }
+
     const sel = document.getElementById('province-select')
     if (sel) {
-      if (_activeProvinces.length === 0) {
-        sel.innerHTML = '<option value="">Chưa có tỉnh/thành nào — liên hệ admin</option>'
-      } else {
-        sel.innerHTML =
-          '<option value="">-- Chọn tỉnh/thành phố --</option>' +
+      sel.innerHTML = _activeProvinces.length === 0
+        ? '<option value="">Chưa có tỉnh/thành — liên hệ admin</option>'
+        : '<option value="">-- Chọn tỉnh/thành phố --</option>' +
           _activeProvinces.map(p =>
             `<option value="${p.name}" ${p.name === (data?.province || '') ? 'selected' : ''}>${p.name}</option>`
           ).join('')
-      }
     }
-
     document.getElementById('province-cancel').onclick = close
     document.getElementById('province-save').onclick = async () => {
       const province = document.getElementById('province-select').value
+      const errEl = document.getElementById('province-err')
       if (!province) {
-        document.getElementById('province-err').textContent = 'Vui lòng chọn tỉnh/thành phố'
-        document.getElementById('province-err').classList.remove('hidden')
-        return
+        errEl.textContent = 'Vui lòng chọn tỉnh/thành phố'
+        errEl.classList.remove('hidden'); return
       }
       try {
         await API.updateProfile({ ..._profileData, province })
         Toast.success('Cập nhật khu vực thành công')
-        close()
-        await refreshProfile()
-      } catch (e) {
-        Toast.error(e.message)
+        close(); await refreshProfile()
+      } catch (e) { Toast.error(e.message) }
+    }
+  }
+
+  // ── Modal thông tin nhận việc ─────────────────
+  function showEditWorkModal(data) {
+    const { close } = Modal.create(`
+      <div class="p-5">
+        <h3 class="text-lg font-bold text-gray-800 mb-1">
+          <i class="fas fa-briefcase mr-2 text-rose-600"></i>Thông tin nhận việc
+        </h3>
+        <p class="text-xs text-gray-400 mb-4">Thông tin bắt buộc để sử dụng chức năng check-in</p>
+        <form id="work-form" class="space-y-3">
+          ${inputField('Số điện thoại <span class="text-red-500">*</span>', 'phone', data?.phone, 'tel', 'VD: 0901234567')}
+          ${inputField('Ngày nhận việc <span class="text-red-500">*</span>', 'start_date', data?.start_date, 'date')}
+          <p id="work-form-error" class="text-red-500 text-sm hidden"></p>
+          <div class="flex gap-3 pt-2">
+            <button type="button" id="work-cancel" class="flex-1 py-2.5 border rounded-xl text-gray-700">Hủy</button>
+            <button type="submit" class="flex-1 py-2.5 bg-rose-600 text-white rounded-xl font-semibold">Lưu</button>
+          </div>
+        </form>
+      </div>
+    `)
+    document.getElementById('work-cancel').onclick = close
+    document.getElementById('work-form').onsubmit = async (e) => {
+      e.preventDefault()
+      const fd   = new FormData(e.target)
+      const body = Object.fromEntries(fd.entries())
+      const errEl = document.getElementById('work-form-error')
+      if (!body.phone)       { errEl.textContent = 'Vui lòng nhập số điện thoại'; errEl.classList.remove('hidden'); return }
+      if (!body.start_date)  { errEl.textContent = 'Vui lòng chọn ngày nhận việc'; errEl.classList.remove('hidden'); return }
+      try {
+        await API.updateProfile({ ..._profileData, ...body })
+        Toast.success('Lưu thông tin nhận việc thành công')
+        close(); await refreshProfile()
+      } catch (err) {
+        errEl.textContent = err.message; errEl.classList.remove('hidden')
       }
     }
   }
 
+  // ── Modal CCCD ────────────────────────────────
   function showEditCCCDModal(data) {
-    const { overlay, close } = Modal.create(`
+    const { close } = Modal.create(`
       <div class="p-5">
-        <h3 class="text-lg font-bold text-gray-800 mb-4"><i class="fas fa-id-card mr-2 text-blue-600"></i>Cập nhật CCCD</h3>
+        <h3 class="text-lg font-bold text-gray-800 mb-1">
+          <i class="fas fa-id-card mr-2 text-blue-600"></i>Cập nhật CCCD / CMND
+        </h3>
+        <p class="text-xs text-gray-400 mb-4">Điền đúng theo thông tin trên thẻ CCCD/CMND</p>
         <form id="cccd-form" class="space-y-3">
-          ${inputField('Số CCCD', 'cccd_number', data?.cccd_number, 'text')}
-          ${inputField('Họ và tên (trên CCCD)', 'cccd_full_name', data?.cccd_full_name)}
-          ${inputField('Ngày sinh', 'cccd_dob', data?.cccd_dob, 'date')}
+          ${inputField('Số CCCD <span class="text-red-500">*</span>', 'cccd_number', data?.cccd_number, 'text', '12 chữ số trên CCCD')}
+          ${inputField('Họ và tên (trên CCCD) <span class="text-red-500">*</span>', 'cccd_full_name', data?.cccd_full_name, 'text', 'Đúng như trên thẻ')}
+          ${inputField('Ngày tháng năm sinh <span class="text-red-500">*</span>', 'cccd_dob', data?.cccd_dob, 'date')}
           ${selectField('Giới tính', 'cccd_gender', data?.cccd_gender, ['Nam', 'Nữ', 'Khác'])}
-          ${inputField('Địa chỉ thường trú', 'cccd_address', data?.cccd_address)}
-          ${inputField('Ngày cấp', 'cccd_issue_date', data?.cccd_issue_date, 'date')}
-          ${inputField('Nơi cấp CCCD', 'cccd_issue_place', data?.cccd_issue_place)}
+          ${inputField('Địa chỉ thường trú <span class="text-red-500">*</span>', 'cccd_address', data?.cccd_address, 'text', 'Địa chỉ đăng ký thường trú')}
+          ${inputField('Ngày cấp <span class="text-red-500">*</span>', 'cccd_issue_date', data?.cccd_issue_date, 'date')}
+          ${inputField('Nơi cấp CCCD <span class="text-red-500">*</span>', 'cccd_issue_place', data?.cccd_issue_place, 'text', 'VD: Cục Cảnh sát QLHC về TTXH')}
           ${inputField('Ngày hết hạn', 'cccd_expiry_date', data?.cccd_expiry_date, 'date')}
-          ${inputField('Số điện thoại', 'phone', data?.phone, 'tel')}
           <p id="cccd-form-error" class="text-red-500 text-sm hidden"></p>
           <div class="flex gap-3 pt-2">
-            <button type="button" id="cccd-cancel" class="flex-1 py-2 border rounded-xl text-gray-700">Hủy</button>
-            <button type="submit" class="flex-1 py-2 bg-blue-600 text-white rounded-xl font-medium">Lưu</button>
+            <button type="button" id="cccd-cancel" class="flex-1 py-2.5 border rounded-xl text-gray-700">Hủy</button>
+            <button type="submit" class="flex-1 py-2.5 bg-blue-600 text-white rounded-xl font-semibold">Lưu</button>
           </div>
         </form>
       </div>
@@ -282,34 +423,51 @@ window.ProfileModule = (() => {
     document.getElementById('cccd-cancel').onclick = close
     document.getElementById('cccd-form').onsubmit = async (e) => {
       e.preventDefault()
-      const fd = new FormData(e.target)
+      const fd   = new FormData(e.target)
       const body = Object.fromEntries(fd.entries())
-      // Gộp thêm bank data hiện tại
+      const errEl = document.getElementById('cccd-form-error')
+      // Validate required fields
+      const required = [
+        ['cccd_number',     'Số CCCD'],
+        ['cccd_full_name',  'Họ và tên'],
+        ['cccd_dob',        'Ngày sinh'],
+        ['cccd_address',    'Địa chỉ thường trú'],
+        ['cccd_issue_date', 'Ngày cấp'],
+        ['cccd_issue_place','Nơi cấp CCCD'],
+      ]
+      for (const [k, label] of required) {
+        if (!body[k]?.trim()) {
+          errEl.textContent = `Vui lòng nhập: ${label}`
+          errEl.classList.remove('hidden'); return
+        }
+      }
       const merged = { ..._profileData, ...body }
       try {
         await API.updateProfile(merged)
-        Toast.success('Cập nhật thông tin thành công')
-        close()
-        await refreshProfile()
+        Toast.success('Cập nhật CCCD thành công')
+        close(); await refreshProfile()
       } catch (err) {
-        document.getElementById('cccd-form-error').textContent = err.message
-        document.getElementById('cccd-form-error').classList.remove('hidden')
+        errEl.textContent = err.message; errEl.classList.remove('hidden')
       }
     }
   }
 
+  // ── Modal ngân hàng ───────────────────────────
   function showEditBankModal(data) {
-    const { overlay, close } = Modal.create(`
+    const { close } = Modal.create(`
       <div class="p-5">
-        <h3 class="text-lg font-bold text-gray-800 mb-4"><i class="fas fa-university mr-2 text-green-600"></i>Cập nhật ngân hàng</h3>
+        <h3 class="text-lg font-bold text-gray-800 mb-1">
+          <i class="fas fa-university mr-2 text-green-600"></i>Thông tin ngân hàng
+        </h3>
+        <p class="text-xs text-gray-400 mb-4">Thông tin tài khoản nhận lương / hoa hồng</p>
         <form id="bank-form" class="space-y-3">
-          ${inputField('Tên ngân hàng', 'bank_name', data?.bank_name)}
-          ${inputField('Số tài khoản', 'bank_account_number', data?.bank_account_number)}
-          ${inputField('Tên chủ tài khoản', 'bank_account_name', data?.bank_account_name)}
+          ${inputField('Tên ngân hàng <span class="text-red-500">*</span>', 'bank_name', data?.bank_name, 'text', 'VD: Vietcombank, MB Bank...')}
+          ${inputField('Số tài khoản <span class="text-red-500">*</span>', 'bank_account_number', data?.bank_account_number, 'text', 'Số tài khoản ngân hàng')}
+          ${inputField('Tên chủ tài khoản <span class="text-red-500">*</span>', 'bank_account_name', data?.bank_account_name, 'text', 'Tên đúng như trong tài khoản')}
           <p id="bank-form-error" class="text-red-500 text-sm hidden"></p>
           <div class="flex gap-3 pt-2">
-            <button type="button" id="bank-cancel" class="flex-1 py-2 border rounded-xl text-gray-700">Hủy</button>
-            <button type="submit" class="flex-1 py-2 bg-green-600 text-white rounded-xl font-medium">Lưu</button>
+            <button type="button" id="bank-cancel" class="flex-1 py-2.5 border rounded-xl text-gray-700">Hủy</button>
+            <button type="submit" class="flex-1 py-2.5 bg-green-600 text-white rounded-xl font-semibold">Lưu</button>
           </div>
         </form>
       </div>
@@ -317,21 +475,24 @@ window.ProfileModule = (() => {
     document.getElementById('bank-cancel').onclick = close
     document.getElementById('bank-form').onsubmit = async (e) => {
       e.preventDefault()
-      const fd = new FormData(e.target)
+      const fd   = new FormData(e.target)
       const body = Object.fromEntries(fd.entries())
+      const errEl = document.getElementById('bank-form-error')
+      if (!body.bank_name?.trim())           { errEl.textContent = 'Vui lòng nhập tên ngân hàng'; errEl.classList.remove('hidden'); return }
+      if (!body.bank_account_number?.trim()) { errEl.textContent = 'Vui lòng nhập số tài khoản'; errEl.classList.remove('hidden'); return }
+      if (!body.bank_account_name?.trim())   { errEl.textContent = 'Vui lòng nhập tên chủ tài khoản'; errEl.classList.remove('hidden'); return }
       const merged = { ..._profileData, ...body }
       try {
         await API.updateProfile(merged)
         Toast.success('Cập nhật ngân hàng thành công')
-        close()
-        await refreshProfile()
+        close(); await refreshProfile()
       } catch (err) {
-        document.getElementById('bank-form-error').textContent = err.message
-        document.getElementById('bank-form-error').classList.remove('hidden')
+        errEl.textContent = err.message; errEl.classList.remove('hidden')
       }
     }
   }
 
+  // ── Refresh profile sau khi lưu ───────────────
   async function refreshProfile() {
     try {
       const data = await loadProfile()
@@ -339,10 +500,12 @@ window.ProfileModule = (() => {
     } catch {}
   }
 
-  function inputField(label, name, value = '', type = 'text') {
+  // ── Helper: input / select field ─────────────
+  function inputField(labelHtml, name, value = '', type = 'text', placeholder = '') {
     return `<div>
-      <label class="block text-sm text-gray-600 mb-1">${label}</label>
+      <label class="block text-sm text-gray-600 mb-1">${labelHtml}</label>
       <input type="${type}" name="${name}" value="${value || ''}"
+        placeholder="${placeholder}"
         class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
     </div>`
   }
@@ -356,38 +519,37 @@ window.ProfileModule = (() => {
     </div>`
   }
 
+  // ── bindEvents ────────────────────────────────
   async function bindEvents() {
     let pendingFront = null
-    let pendingBack = null
+    let pendingBack  = null
 
-    // Load data
     try {
       const data = await loadProfile()
       document.getElementById('profile-loading').classList.add('hidden')
       document.getElementById('profile-content').classList.remove('hidden')
       populateProfileUI(data)
     } catch (e) {
-      document.getElementById('profile-loading').innerHTML = `<p class="text-red-500 text-sm">${e.message}</p>`
+      document.getElementById('profile-loading').innerHTML =
+        `<p class="text-red-500 text-sm text-center">${e.message}</p>`
     }
 
     document.getElementById('btn-edit-province').onclick = () => showEditProvinceModal(_profileData)
-    document.getElementById('btn-edit-cccd').onclick = () => showEditCCCDModal(_profileData)
-    document.getElementById('btn-edit-bank').onclick = () => showEditBankModal(_profileData)
+    document.getElementById('btn-edit-work').onclick     = () => showEditWorkModal(_profileData)
+    document.getElementById('btn-edit-cccd').onclick     = () => showEditCCCDModal(_profileData)
+    document.getElementById('btn-edit-bank').onclick     = () => showEditBankModal(_profileData)
     document.getElementById('btn-change-password').onclick = () => Auth.showChangePasswordModal()
     document.getElementById('btn-logout').onclick = () => {
       Modal.confirm('Đăng xuất', 'Bạn có chắc muốn đăng xuất?', () => Auth.logout(), 'Đăng xuất', true)
     }
 
     // CCCD image upload
-    const frontEl = document.getElementById('cccd-front-preview')
-    const backEl = document.getElementById('cccd-back-preview')
+    const frontEl  = document.getElementById('cccd-front-preview')
+    const backEl   = document.getElementById('cccd-back-preview')
     const uploadBtn = document.getElementById('btn-upload-cccd')
 
     async function handleCCCDImageClick(side) {
       try {
-        // CCCD ảnh: không cần GPS/watermark, chỉ resize + nén
-        // Dùng processImage với geoInfo = null → watermark hiện "Chưa xác định"
-        // Hoặc dùng capture(null, true) để bỏ qua watermark cho CCCD
         const base64 = await Camera.captureNoWatermark(true)
         if (side === 'front') {
           pendingFront = base64
@@ -405,7 +567,7 @@ window.ProfileModule = (() => {
     }
 
     frontEl.onclick = () => handleCCCDImageClick('front')
-    backEl.onclick = () => handleCCCDImageClick('back')
+    backEl.onclick  = () => handleCCCDImageClick('back')
 
     uploadBtn.onclick = async () => {
       try {
@@ -424,5 +586,5 @@ window.ProfileModule = (() => {
     }
   }
 
-  return { renderPage, bindEvents }
+  return { renderPage, bindEvents, isProfileComplete, getMissingFields, loadProfile }
 })()

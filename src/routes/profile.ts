@@ -22,7 +22,7 @@ profile.use('*', authMiddleware)
 profile.get('/', async (c) => {
   const user = c.get('user')
   const data = await c.env.DB.prepare(`
-    SELECT u.id, u.username, u.full_name, u.role, u.province,
+    SELECT u.id, u.username, u.full_name, u.role, u.province, u.start_date,
            p.cccd_number, p.cccd_full_name, p.cccd_dob, p.cccd_gender,
            p.cccd_address, p.cccd_issue_date, p.cccd_expiry_date, p.cccd_issue_place,
            p.cccd_front_image, p.cccd_back_image,
@@ -45,14 +45,20 @@ profile.put('/', async (c) => {
     cccd_number, cccd_full_name, cccd_dob, cccd_gender,
     cccd_address, cccd_issue_date, cccd_expiry_date, cccd_issue_place,
     bank_account_number, bank_name, bank_account_name, phone,
-    province
+    province, start_date
   } = body
 
-  // Cập nhật province trong bảng users
-  if (province !== undefined) {
+  // Cập nhật province + start_date trong bảng users
+  if (province !== undefined || start_date !== undefined) {
+    const fields: string[] = []
+    const vals: unknown[] = []
+    if (province !== undefined)    { fields.push('province = ?');   vals.push(province?.trim() || null) }
+    if (start_date !== undefined)  { fields.push('start_date = ?'); vals.push(start_date || null) }
+    fields.push('updated_at = CURRENT_TIMESTAMP')
+    vals.push(user.id)
     await c.env.DB.prepare(
-      'UPDATE users SET province = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-    ).bind(province?.trim() || null, user.id).run()
+      `UPDATE users SET ${fields.join(', ')} WHERE id = ?`
+    ).bind(...vals).run()
   }
 
   // Upsert profile
