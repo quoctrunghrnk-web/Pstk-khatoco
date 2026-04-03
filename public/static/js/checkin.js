@@ -53,8 +53,7 @@ window.CheckinModule = (() => {
         <div class="bg-white rounded-2xl shadow-md border border-green-50 p-4">
           <div class="flex items-center justify-between mb-3">
             <h3 class="font-bold text-gray-800 flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span>
-              <span id="ci-record-date">Hôm nay</span>
+              <span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span>Hôm nay
             </h3>
             <span id="ci-status-badge">
               <i class="fas fa-spinner fa-spin text-gray-300"></i>
@@ -431,15 +430,6 @@ window.CheckinModule = (() => {
     const badgeEl = document.getElementById('ci-status-badge')
     if (badgeEl) badgeEl.innerHTML = getStatusBadge(record?.status)
 
-    // Hiển thị ngày của record (có thể là ngày cũ)
-    const dateEl = document.getElementById('ci-record-date')
-    if (dateEl && record?.date) {
-      const todayVN = new Date(Date.now() + 7*3600*1000).toISOString().slice(0,10)
-      dateEl.textContent = record.date === todayVN ? 'Hôm nay' : `Ngày ${record.date}`
-      dateEl.className = record.date === todayVN
-        ? 'text-xs text-gray-400'
-        : 'text-xs text-orange-500 font-semibold'
-    }
 
     // Giờ + địa chỉ
     const setEl = (id, val) => {
@@ -465,21 +455,12 @@ window.CheckinModule = (() => {
         document.getElementById('btn-do-checkin').onclick = doCheckin
 
       } else if (record.status === 'checkin') {
-        const today = new Date().toLocaleDateString('vi-VN', {timeZone:'Asia/Ho_Chi_Minh'})
-        const recDate = new Date(record.date + 'T00:00:00+07:00').toLocaleDateString('vi-VN', {timeZone:'Asia/Ho_Chi_Minh'})
-        const isOldDay = record.date !== new Date(Date.now() + 7*3600*1000).toISOString().slice(0,10)
         actionsEl.innerHTML = `
-          ${isOldDay ? `
-          <div class="w-full mb-2 py-2 px-3 bg-orange-50 border border-orange-200 rounded-xl text-orange-700 text-xs flex items-center gap-2">
-            <i class="fas fa-exclamation-triangle text-orange-500 flex-shrink-0"></i>
-            <span>Bạn chưa check-out ngày <b>${record.date}</b>. Hãy check-out ca cũ trước.</span>
-          </div>` : ''}
           <button id="btn-do-checkout"
             class="w-full py-4 bg-purple-600 hover:bg-purple-700 active:scale-95 text-white
                    rounded-2xl font-bold text-lg flex items-center justify-center gap-3
                    transition-transform shadow-lg shadow-purple-200">
-            <i class="fas fa-sign-out-alt text-xl"></i>
-            <span>${isOldDay ? 'CHECK OUT CA CŨ' : 'CHECK OUT'}</span>
+            <i class="fas fa-sign-out-alt text-xl"></i><span>CHECK OUT</span>
           </button>`
         document.getElementById('btn-do-checkout').onclick = doCheckout
 

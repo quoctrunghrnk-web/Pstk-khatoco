@@ -56,16 +56,7 @@ checkin.post('/start', async (c) => {
   const user  = c.get('user')
   const today = getTodayVN()
 
-  // Kiểm tra còn record chưa checkout từ ngày trước không
-  const pending = await c.env.DB.prepare(
-    `SELECT id, date FROM checkins WHERE user_id = ? AND status = 'checkin' ORDER BY date DESC LIMIT 1`
-  ).bind(user.id).first<{ id: number; date: string }>()
-
-  if (pending) {
-    return c.json(err(`Bạn chưa check-out ngày ${pending.date}. Vui lòng check-out trước khi check-in mới.`), 400)
-  }
-
-  // Kiểm tra đã check-in hôm nay chưa (kể cả đã checkout)
+  // Kiểm tra đã check-in hôm nay chưa
   const existing = await c.env.DB.prepare(
     'SELECT id FROM checkins WHERE user_id = ? AND date = ?'
   ).bind(user.id, today).first<{ id: number }>()
@@ -151,14 +142,15 @@ checkin.post('/activity', async (c) => {
 // ── POST /api/checkin/end ──────────────────────────────────────────────────
 checkin.post('/end', async (c) => {
   const user  = c.get('user')
+  const today = getTodayVN()
 
-  // Tìm record chưa checkout gần nhất (có thể là hôm qua hoặc trước đó)
+  // Chỉ checkout record hôm nay
   const record = await c.env.DB.prepare(
-    `SELECT id, date, status FROM checkins WHERE user_id = ? AND status = 'checkin' ORDER BY date DESC LIMIT 1`
-  ).bind(user.id).first<{ id: number; date: string; status: string }>()
+    `SELECT id, status FROM checkins WHERE user_id = ? AND date = ?`
+  ).bind(user.id, today).first<{ id: number; status: string }>()
 
   if (!record) {
-    return c.json(err('Bạn chưa có ca làm việc nào cần check-out'), 400)
+    return c.json(err('Bạn chưa check-in hôm nay'), 400)
   }
 
   const body = await c.req.json()
@@ -197,22 +189,14 @@ checkin.post('/end', async (c) => {
 })
 
 // ── GET /api/checkin/today ─────────────────────────────────────────────────
-// Trả về: record hôm nay NẾU có, hoặc record chưa checkout gần nhất
 checkin.get('/today', async (c) => {
   const user  = c.get('user')
   const today = getTodayVN()
 
-  // Ưu tiên record hôm nay
-  let record = await c.env.DB.prepare(
+  // Chỉ lấy record hôm nay
+  const record = await c.env.DB.prepare(
     'SELECT * FROM checkins WHERE user_id = ? AND date = ?'
   ).bind(user.id, today).first()
-
-  // Nếu hôm nay chưa có gì, kiểm tra có record pending từ hôm qua không
-  if (!record) {
-    record = await c.env.DB.prepare(
-      `SELECT * FROM checkins WHERE user_id = ? AND status = 'checkin' ORDER BY date DESC LIMIT 1`
-    ).bind(user.id).first()
-  }
 
   return c.json(ok(record ?? null))
 })
