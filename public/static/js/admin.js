@@ -104,14 +104,20 @@ window.AdminModule = (() => {
           <h3 class="font-bold text-gray-800 flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>Danh sách nhân viên
           </h3>
-          <button id="btn-add-user" class="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm rounded-xl shadow-sm hover:from-red-700 hover:to-red-800 transition-all font-semibold">
-            <i class="fas fa-plus text-xs"></i>Thêm
-          </button>
+          <div class="flex gap-2">
+            <button id="btn-export-excel-staff"
+              class="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-600 to-green-700 text-white text-sm rounded-xl shadow-sm hover:from-emerald-700 hover:to-green-800 transition-all font-semibold">
+              <i class="fas fa-file-excel text-xs"></i>Excel
+            </button>
+            <button id="btn-add-user" class="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm rounded-xl shadow-sm hover:from-red-700 hover:to-red-800 transition-all font-semibold">
+              <i class="fas fa-plus text-xs"></i>Thêm
+            </button>
+          </div>
         </div>
 
         <div class="bg-white rounded-2xl shadow-md border border-red-50 p-3">
-          <div class="flex gap-2 items-end">
-            <div class="flex-1">
+          <div class="space-y-2">
+            <div>
               <label class="block text-xs font-semibold text-red-600 mb-1.5">
                 <i class="fas fa-map-marker-alt mr-1"></i>Lọc theo tỉnh/thành
               </label>
@@ -125,9 +131,19 @@ window.AdminModule = (() => {
                 <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-red-400 text-xs pointer-events-none"></i>
               </div>
             </div>
-            <button id="btn-filter-staff" class="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-semibold shadow-sm">
-              <i class="fas fa-filter"></i>
-            </button>
+            <div class="flex gap-2 items-end">
+              <div class="flex-1">
+                <label class="block text-xs font-semibold text-gray-600 mb-1.5">
+                  <i class="fas fa-search mr-1 text-gray-400"></i>Tìm theo tên / SĐT
+                </label>
+                <input type="text" id="staff-search-input" placeholder="Nhập tên hoặc số điện thoại..."
+                  class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm
+                         focus:outline-none focus:ring-2 focus:ring-red-400" />
+              </div>
+              <button id="btn-filter-staff" class="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-semibold shadow-sm">
+                <i class="fas fa-filter"></i>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -222,6 +238,14 @@ window.AdminModule = (() => {
                 </select>
                 <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
               </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1.5">
+                <i class="fas fa-id-card mr-1 text-blue-400"></i>Mã nhân viên (Số điện thoại)
+              </label>
+              <input type="tel" id="report-staff-code" placeholder="Nhập SĐT để lọc NV..."
+                inputmode="numeric" pattern="[0-9]*"
+                class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-400 bg-white" />
             </div>
             <div class="flex gap-2 pt-1">
               <button id="btn-load-report" class="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl text-sm font-semibold shadow-sm">
@@ -430,15 +454,31 @@ window.AdminModule = (() => {
   }
 
   // ── Load danh sách NV ─────────────────────────
-  async function loadUsers(province = '') {
+  let _allUsers = []  // cache for Excel export + search
+
+  async function loadUsers(province = '', search = '') {
     const el = document.getElementById('users-list')
     if (!el) return
     try {
-      const params = province ? { province } : {}
+      const params = {}
+      if (province) params.province = province
       const res = await API.getUsers(params)
-      const users = res.data || []
+      _allUsers = res.data || []
+
+      // Client-side search filter
+      let users = _allUsers
+      if (search) {
+        const q = search.toLowerCase().trim()
+        users = _allUsers.filter(u =>
+          u.full_name?.toLowerCase().includes(q) ||
+          u.username?.toLowerCase().includes(q) ||
+          u.phone?.includes(q) ||
+          u.cccd_number?.includes(q)
+        )
+      }
+
       if (users.length === 0) {
-        el.innerHTML = `<p class="text-center text-gray-400 py-8">Chưa có nhân viên${province ? ` ở <b>${province}</b>` : ''}</p>`
+        el.innerHTML = `<p class="text-center text-gray-400 py-8">Không tìm thấy nhân viên${province ? ` ở <b>${province}</b>` : ''}${search ? ` khớp "<b>${search}</b>"` : ''}</p>`
         return
       }
 
@@ -455,33 +495,70 @@ window.AdminModule = (() => {
             </p>
             <div class="space-y-2">
               ${list.map(u => `
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 flex items-start gap-3
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-3
                   ${u.account_status === 'pending' ? 'border-l-4 border-l-yellow-400' : ''}
                   ${u.account_status === 'resigned' ? 'opacity-60' : ''}">
-                  <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5
-                    ${u.role === 'admin' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}">
-                    <i class="fas fa-user text-sm"></i>
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <p class="font-semibold text-gray-800 text-sm truncate">${u.full_name}</p>
-                    <p class="text-xs text-gray-400">@${u.username}</p>
-                    <div class="flex flex-wrap gap-1.5 mt-1.5">
-                      <span class="text-xs px-2 py-0.5 rounded-full ${u.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}">
-                        ${u.role === 'admin' ? 'Admin' : 'NV'}
-                      </span>
-                      ${statusBadge(u)}
-                      ${u.province
-                        ? `<span class="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-medium">
-                             <i class="fas fa-map-marker-alt mr-0.5 text-xs"></i>${u.province}
-                           </span>`
-                        : u.role !== 'admin'
-                          ? `<span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 italic">Chưa có tỉnh</span>`
-                          : ''}
+                  <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5
+                      ${u.role === 'admin' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}">
+                      <i class="fas fa-user text-sm"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="font-semibold text-gray-800 text-sm">${u.full_name}</p>
+                      <p class="text-xs text-gray-500 font-mono">${u.username}</p>
+                      <div class="flex flex-wrap gap-1.5 mt-1.5">
+                        <span class="text-xs px-2 py-0.5 rounded-full ${u.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}">
+                          ${u.role === 'admin' ? 'Admin' : 'NV thị trường'}
+                        </span>
+                        ${statusBadge(u)}
+                        ${u.province
+                          ? `<span class="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-medium">
+                               <i class="fas fa-map-marker-alt mr-0.5 text-xs"></i>${u.province}
+                             </span>`
+                          : u.role !== 'admin'
+                            ? `<span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-400 italic">Chưa có tỉnh</span>`
+                            : ''}
+                      </div>
+                    </div>
+                    <div class="flex flex-col gap-1 flex-shrink-0">
+                      ${actionButtons(u)}
                     </div>
                   </div>
-                  <div class="flex flex-col gap-1 flex-shrink-0">
-                    ${actionButtons(u)}
-                  </div>
+                  <!-- Chi tiết đầy đủ -->
+                  ${u.role !== 'admin' ? `
+                  <div class="mt-2.5 pt-2.5 border-t border-gray-100 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs text-gray-600">
+                    ${u.phone ? `
+                    <div class="flex items-center gap-1.5">
+                      <i class="fas fa-phone text-emerald-400 w-3.5 text-center"></i>
+                      <span>${u.phone}</span>
+                    </div>` : `
+                    <div class="flex items-center gap-1.5 text-gray-300 italic">
+                      <i class="fas fa-phone w-3.5 text-center"></i>
+                      <span>Chưa có SĐT</span>
+                    </div>`}
+                    ${u.cccd_number ? `
+                    <div class="flex items-center gap-1.5">
+                      <i class="fas fa-id-card text-blue-400 w-3.5 text-center"></i>
+                      <span>${u.cccd_number}</span>
+                    </div>` : `
+                    <div class="flex items-center gap-1.5 text-gray-300 italic">
+                      <i class="fas fa-id-card w-3.5 text-center"></i>
+                      <span>Chưa có CCCD</span>
+                    </div>`}
+                    ${u.bank_name ? `
+                    <div class="flex items-center gap-1.5 col-span-2">
+                      <i class="fas fa-university text-purple-400 w-3.5 text-center"></i>
+                      <span class="truncate">${u.bank_name}${u.bank_account_number ? ' · ' + u.bank_account_number : ''}</span>
+                    </div>` : `
+                    <div class="flex items-center gap-1.5 col-span-2 text-gray-300 italic">
+                      <i class="fas fa-university w-3.5 text-center"></i>
+                      <span>Chưa có thông tin ngân hàng</span>
+                    </div>`}
+                    <div class="flex items-center gap-1.5 col-span-2 text-gray-400">
+                      <i class="fas fa-clock w-3.5 text-center"></i>
+                      <span>Tham gia: ${u.created_at ? new Date(u.created_at).toLocaleDateString('vi-VN') : '--'}</span>
+                    </div>
+                  </div>` : ''}
                 </div>
               `).join('')}
             </div>
@@ -498,12 +575,52 @@ window.AdminModule = (() => {
     }
   }
 
+  // ── Xuất Excel danh sách NV ───────────────────
+  function exportStaffExcel() {
+    if (!_allUsers.length) {
+      Toast.error('Chưa có dữ liệu nhân viên'); return
+    }
+    // Build CSV with BOM for Excel UTF-8
+    const rows = [
+      ['STT','Họ và tên','Số điện thoại (login)','Số điện thoại','Vai trò','Trạng thái','Tỉnh/Thành','CCCD','Ngân hàng','Số TK','Ngày tham gia']
+    ]
+    _allUsers.forEach((u, i) => {
+      const statusMap = { pending: 'Chờ kích hoạt', active: 'Đang làm việc', resigned: 'Đã nghỉ việc' }
+      rows.push([
+        i + 1,
+        u.full_name || '',
+        u.username || '',
+        u.phone || '',
+        u.role === 'admin' ? 'Admin' : 'Nhân viên',
+        statusMap[u.account_status] || u.account_status || '',
+        u.province || '',
+        u.cccd_number || '',
+        u.bank_name || '',
+        u.bank_account_number || '',
+        u.created_at ? new Date(u.created_at).toLocaleDateString('vi-VN') : '',
+      ])
+    })
+    const csv = '\uFEFF' + rows.map(r =>
+      r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+    ).join('\n')
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    const today = new Date(Date.now() + 7*60*60*1000).toISOString().slice(0,10)
+    a.href     = url
+    a.download = `danh-sach-nhan-vien-${today}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    Toast.success('Đã xuất file Excel!')
+  }
+
   // ── Load báo cáo ─────────────────────────────
   let _lastReportData = null
   let _lastReportDate = ''
   let _lastReportProvince = ''
 
-  async function loadReport(date, province = '') {
+  async function loadReport(date, province = '', staffCode = '') {
     const el = document.getElementById('report-list')
     const summaryEl = document.getElementById('report-summary')
     if (!el) return
@@ -514,6 +631,7 @@ window.AdminModule = (() => {
     try {
       const params = { limit: 200 }
       if (province) params.province = province
+      if (staffCode) params.username = staffCode.trim()
       const res = await API.getAdminCheckins(date, params)
       const records = res.data || []
 
@@ -545,9 +663,10 @@ window.AdminModule = (() => {
             <div class="flex-1 min-w-0">
               <p class="font-semibold text-gray-800">${r.full_name}</p>
               <p class="text-xs text-gray-500">
-                @${r.username}
+                <span class="font-mono text-gray-600">${r.username}</span>
                 ${r.province ? `<span class="ml-1 text-indigo-500"><i class="fas fa-map-marker-alt"></i> ${r.province}</span>` : ''}
               </p>
+              ${r.store_name ? `<p class="text-xs text-orange-600 mt-0.5"><i class="fas fa-store mr-1"></i>${r.store_name}</p>` : ''}
             </div>
             <span class="text-xs px-2 py-1 rounded-full ${r.status === 'checkout' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">
               ${r.status === 'checkout' ? 'Hoàn thành' : 'Đang làm'}
@@ -612,7 +731,7 @@ window.AdminModule = (() => {
           <span class="staff-no">${i + 1}</span>
           <div class="staff-info">
             <strong>${r.full_name}</strong>
-            <span class="staff-sub">${r.username}${r.province ? ' &nbsp;·&nbsp; <i class="pin"></i>' + r.province : ''}</span>
+            <span class="staff-sub">${r.username}${r.province ? ' &nbsp;·&nbsp; ' + r.province : ''}${r.store_name ? ' &nbsp;·&nbsp; 🏪 ' + r.store_name : ''}</span>
           </div>
           <span class="status-badge ${r.status === 'checkout' ? 'done' : 'progress'}">
             ${r.status === 'checkout' ? '✓ Hoàn thành' : '⏳ Đang làm'}
@@ -911,7 +1030,9 @@ ${rows || '<div style="text-align:center;padding:60px;color:#9ca3af;font-size:14
       Modal.create(`
         <div class="p-5">
           <h3 class="text-lg font-bold text-gray-800 mb-1">${r.full_name}</h3>
+          <p class="text-xs text-gray-400 font-mono mb-0.5">${r.username || ''}</p>
           <p class="text-sm text-gray-500 mb-1">${r.date}</p>
+          ${r.store_name ? `<p class="text-xs text-orange-600 mb-1"><i class="fas fa-store mr-1"></i>${r.store_name}</p>` : ''}
           ${r.province ? `<p class="text-xs text-indigo-500 mb-3"><i class="fas fa-map-marker-alt mr-1"></i>${r.province}</p>` : '<div class="mb-3"></div>'}
           <div class="space-y-3">
             <div class="grid grid-cols-2 gap-2">
@@ -984,11 +1105,20 @@ ${rows || '<div style="text-align:center;padding:60px;color:#9ca3af;font-size:14
     document.getElementById('btn-add-product').onclick = () => showAddProductModal()
     document.getElementById('btn-add-gift').onclick = () => showAddGiftModal()
 
-    // Filter NV theo tỉnh
-    document.getElementById('btn-filter-staff').onclick = () => {
-      const prov = document.getElementById('staff-province-filter')?.value || ''
-      loadUsers(prov)
+    // Filter NV theo tỉnh + tìm kiếm
+    const doFilterStaff = () => {
+      const prov   = document.getElementById('staff-province-filter')?.value || ''
+      const search = document.getElementById('staff-search-input')?.value || ''
+      loadUsers(prov, search)
     }
+    document.getElementById('btn-filter-staff').onclick = doFilterStaff
+    // Enter key in search input
+    document.getElementById('staff-search-input')?.addEventListener('keypress', e => {
+      if (e.key === 'Enter') doFilterStaff()
+    })
+
+    // Xuất Excel nhân viên
+    document.getElementById('btn-export-excel-staff').onclick = exportStaffExcel
 
     // Ngày báo cáo mặc định = hôm nay VN
     const today = new Date(Date.now() + 7*60*60*1000).toISOString().slice(0,10)
@@ -997,9 +1127,10 @@ ${rows || '<div style="text-align:center;padding:60px;color:#9ca3af;font-size:14
 
     // Load báo cáo
     document.getElementById('btn-load-report').onclick = () => {
-      const date = document.getElementById('report-date').value
-      const prov = document.getElementById('report-province-filter')?.value || ''
-      if (date) loadReport(date, prov)
+      const date      = document.getElementById('report-date').value
+      const prov      = document.getElementById('report-province-filter')?.value || ''
+      const staffCode = document.getElementById('report-staff-code')?.value || ''
+      if (date) loadReport(date, prov, staffCode)
     }
 
     // Xuất PDF

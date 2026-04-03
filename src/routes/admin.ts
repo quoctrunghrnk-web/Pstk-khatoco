@@ -209,19 +209,20 @@ admin.post('/reset-password', async (c) => {
 })
 
 // ── GET /api/admin/checkins ───────────────────────────────────────────────
-// Query params: date, date_from, date_to, user_id, page, limit
+// Query params: date, date_from, date_to, user_id, username, province, page, limit
 admin.get('/checkins', async (c) => {
   const date      = c.req.query('date')
   const dateFrom  = c.req.query('date_from')
   const dateTo    = c.req.query('date_to')
   const userId    = c.req.query('user_id')
+  const username  = c.req.query('username')   // filter by phone/username
   const province  = c.req.query('province')
   const page      = Math.max(1, parseInt(c.req.query('page')  ?? '1'))
   const limit     = Math.min(200, Math.max(1, parseInt(c.req.query('limit') ?? '50')))
   const offset    = (page - 1) * limit
 
   let query = `
-    SELECT c.id, c.date, c.checkin_time, c.checkout_time,
+    SELECT c.id, c.date, c.store_name, c.checkin_time, c.checkout_time,
            c.checkin_address, c.checkout_address,
            c.checkin_image1, c.checkin_image2,
            c.checkout_image1, c.checkout_image2,
@@ -240,8 +241,9 @@ admin.get('/checkins', async (c) => {
     if (dateFrom) { query += ' AND c.date >= ?'; params.push(dateFrom) }
     if (dateTo)   { query += ' AND c.date <= ?'; params.push(dateTo) }
   }
-  if (userId)   { query += ' AND c.user_id = ?';  params.push(userId) }
-  if (province) { query += ' AND u.province = ?'; params.push(province) }
+  if (userId)   { query += ' AND c.user_id = ?';       params.push(userId) }
+  if (username) { query += ' AND u.username LIKE ?';   params.push(`%${username}%`) }
+  if (province) { query += ' AND u.province = ?';      params.push(province) }
 
   query += ' ORDER BY c.date DESC, c.checkin_time DESC LIMIT ? OFFSET ?'
   params.push(limit, offset)
