@@ -1025,29 +1025,44 @@ ${rows || '<div style="text-align:center;padding:60px;color:#9ca3af;font-size:14
         listEl.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">Chưa có sản phẩm nào</p>'
         return
       }
-      listEl.innerHTML = products.map(p => `
+      listEl.innerHTML = products.map(p => {
+        const safeId = p.id
+        return `
         <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl mb-2 border border-gray-100">
           <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
             <i class="fas fa-wine-bottle text-blue-500 text-xs"></i>
           </div>
           <div class="flex-1 min-w-0">
             <p class="font-semibold text-sm text-gray-800 truncate">${p.name}</p>
-            <p class="text-xs text-gray-400">${p.unit || 'Chưa có đơn vị'} · Thứ tự: ${p.sort_order || 0}
-              · <span class="${p.is_active ? 'text-green-500' : 'text-red-500'}">${p.is_active ? 'Hoạt động' : 'Tắt'}</span>
+            <p class="text-xs text-gray-400">${p.unit || 'Chưa có đơn vị'} &middot; Thứ tự: ${p.sort_order || 0}
+              &middot; <span class="${p.is_active ? 'text-green-500' : 'text-red-500'}">${p.is_active ? 'Hoạt động' : 'Tắt'}</span>
             </p>
           </div>
           <div class="flex gap-1.5 flex-shrink-0">
-            <button onclick="AdminModule.editProduct(${p.id},'${p.name.replace(/'/g,\"\\'\")}}','${(p.unit||'').replace(/'/g,\"\\'\")}}',${p.sort_order||0})"
+            <button data-action="edit-product" data-id="${safeId}"
               class="w-8 h-8 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-xs">
               <i class="fas fa-edit"></i>
             </button>
-            <button onclick="AdminModule.deleteProduct(${p.id})"
+            <button data-action="del-product" data-id="${safeId}"
               class="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg flex items-center justify-center text-xs">
               <i class="fas fa-trash"></i>
             </button>
           </div>
-        </div>
-      `).join('')
+        </div>`
+      }).join('')
+
+      // Bind click events (store data in JS, not in HTML attrs)
+      const _prodData = {}
+      products.forEach(p => { _prodData[p.id] = p })
+      listEl.querySelectorAll('[data-action="edit-product"]').forEach(btn => {
+        btn.onclick = () => {
+          const p = _prodData[btn.dataset.id]
+          if (p) showAddProductModal(p)
+        }
+      })
+      listEl.querySelectorAll('[data-action="del-product"]').forEach(btn => {
+        btn.onclick = () => deleteProduct(btn.dataset.id)
+      })
     } catch (e) {
       listEl.innerHTML = `<p class="text-red-400 text-sm text-center py-4">${e.message}</p>`
     }
@@ -1063,29 +1078,43 @@ ${rows || '<div style="text-align:center;padding:60px;color:#9ca3af;font-size:14
         listEl.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">Chưa có quà tặng nào</p>'
         return
       }
-      listEl.innerHTML = gifts.map(g => `
+      listEl.innerHTML = gifts.map(g => {
+        const safeId = g.id
+        return `
         <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl mb-2 border border-amber-100">
           <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
             <i class="fas fa-gift text-amber-500 text-xs"></i>
           </div>
           <div class="flex-1 min-w-0">
             <p class="font-semibold text-sm text-gray-800 truncate">${g.name}</p>
-            <p class="text-xs text-gray-400">${g.unit || 'Chưa có đơn vị'} · Thứ tự: ${g.sort_order || 0}
-              · <span class="${g.is_active ? 'text-green-500' : 'text-red-500'}">${g.is_active ? 'Hoạt động' : 'Tắt'}</span>
+            <p class="text-xs text-gray-400">${g.unit || 'Chưa có đơn vị'} &middot; Thứ tự: ${g.sort_order || 0}
+              &middot; <span class="${g.is_active ? 'text-green-500' : 'text-red-500'}">${g.is_active ? 'Hoạt động' : 'Tắt'}</span>
             </p>
           </div>
           <div class="flex gap-1.5 flex-shrink-0">
-            <button onclick="AdminModule.editGift(${g.id},'${g.name.replace(/'/g,\"\\'\")}}','${(g.unit||'').replace(/'/g,\"\\'\")}}',${g.sort_order||0})"
+            <button data-action="edit-gift" data-id="${safeId}"
               class="w-8 h-8 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center text-xs">
               <i class="fas fa-edit"></i>
             </button>
-            <button onclick="AdminModule.deleteGift(${g.id})"
+            <button data-action="del-gift" data-id="${safeId}"
               class="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg flex items-center justify-center text-xs">
               <i class="fas fa-trash"></i>
             </button>
           </div>
-        </div>
-      `).join('')
+        </div>`
+      }).join('')
+
+      const _giftData = {}
+      gifts.forEach(g => { _giftData[g.id] = g })
+      listEl.querySelectorAll('[data-action="edit-gift"]').forEach(btn => {
+        btn.onclick = () => {
+          const g = _giftData[btn.dataset.id]
+          if (g) showAddGiftModal(g)
+        }
+      })
+      listEl.querySelectorAll('[data-action="del-gift"]').forEach(btn => {
+        btn.onclick = () => deleteGift(btn.dataset.id)
+      })
     } catch (e) {
       listEl.innerHTML = `<p class="text-red-400 text-sm text-center py-4">${e.message}</p>`
     }
