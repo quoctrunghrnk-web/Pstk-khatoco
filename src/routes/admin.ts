@@ -29,8 +29,11 @@ admin.get('/users', async (c) => {
   const province = c.req.query('province')
   let usersQuery = `
     SELECT u.id, u.username, u.full_name, u.role, u.is_active,
-           u.account_status, u.province, u.created_at,
-           p.phone, p.cccd_number, p.bank_name, p.bank_account_number
+           u.account_status, u.province, u.created_at, u.start_date,
+           p.phone,
+           p.cccd_number, p.cccd_full_name, p.cccd_dob, p.cccd_gender,
+           p.cccd_address, p.cccd_issue_date, p.cccd_expiry_date, p.cccd_issue_place,
+           p.bank_account_number, p.bank_name, p.bank_account_name
     FROM users u
     LEFT JOIN profiles p ON p.user_id = u.id
     WHERE 1=1
@@ -66,9 +69,10 @@ admin.post('/users', async (c) => {
   if (exists) return c.json(err('Tên đăng nhập đã tồn tại'), 400)
 
   const hash = await hashPassword(password)
+  const start_date = body.start_date || null
   const result = await c.env.DB.prepare(
-    'INSERT INTO users (username, password_hash, full_name, role) VALUES (?, ?, ?, ?)'
-  ).bind(username, hash, full_name, role ?? 'staff').run()
+    'INSERT INTO users (username, password_hash, full_name, role, start_date) VALUES (?, ?, ?, ?, ?)'
+  ).bind(username, hash, full_name, role ?? 'staff', start_date).run()
 
   const newId = result.meta.last_row_id
 
@@ -88,7 +92,7 @@ admin.put('/users/:id', async (c) => {
   if (isNaN(id)) return c.json(err('ID không hợp lệ'), 400)
 
   const body = await c.req.json()
-  const { full_name, role, is_active, account_status, province } = body
+  const { full_name, role, is_active, account_status, province, start_date } = body
 
   // Validate account_status nếu có
   const validStatuses = ['pending', 'active', 'resigned']
@@ -112,6 +116,7 @@ admin.put('/users/:id', async (c) => {
       is_active      = COALESCE(?, is_active),
       account_status = COALESCE(?, account_status),
       province       = COALESCE(?, province),
+      start_date     = COALESCE(?, start_date),
       updated_at     = CURRENT_TIMESTAMP
     WHERE id = ?
   `).bind(
@@ -120,6 +125,7 @@ admin.put('/users/:id', async (c) => {
     is_active      ?? null,
     account_status ?? null,
     province       ?? null,
+    start_date     ?? null,
     id
   ).run()
 
@@ -181,7 +187,7 @@ admin.get('/users/:id/profile', async (c) => {
     SELECT u.id, u.username, u.full_name, u.role, u.is_active, u.created_at,
            p.phone,
            p.cccd_number, p.cccd_full_name, p.cccd_dob, p.cccd_gender,
-           p.cccd_address, p.cccd_issue_date, p.cccd_expiry_date,
+           p.cccd_address, p.cccd_issue_date, p.cccd_expiry_date, p.cccd_issue_place,
            p.cccd_front_image, p.cccd_back_image,
            p.bank_account_number, p.bank_name, p.bank_account_name,
            p.updated_at AS profile_updated_at

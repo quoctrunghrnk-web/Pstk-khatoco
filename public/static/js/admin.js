@@ -580,26 +580,59 @@ window.AdminModule = (() => {
     if (!_allUsers.length) {
       Toast.error('Chưa có dữ liệu nhân viên'); return
     }
-    // Build CSV with BOM for Excel UTF-8
-    const rows = [
-      ['STT','Họ và tên','Số điện thoại (login)','Số điện thoại','Vai trò','Trạng thái','Tỉnh/Thành','CCCD','Ngân hàng','Số TK','Ngày tham gia']
-    ]
-    _allUsers.forEach((u, i) => {
-      const statusMap = { pending: 'Chờ kích hoạt', active: 'Đang làm việc', resigned: 'Đã nghỉ việc' }
+
+    // Chỉ lấy nhân viên (không lấy admin)
+    const staff = _allUsers.filter(u => u.role !== 'admin')
+    if (!staff.length) {
+      Toast.error('Không có nhân viên để xuất'); return
+    }
+
+    // Helper: format date YYYY-MM-DD → DD/MM/YYYY
+    const fmtDate = (d) => {
+      if (!d) return ''
+      // hỗ trợ cả ISO datetime (2026-04-03T...) lẫn date thuần (2026-04-03)
+      const s = String(d).slice(0, 10)
+      const [y, m, dd] = s.split('-')
+      if (!y || !m || !dd) return d
+      return `${dd}/${m}/${y}`
+    }
+
+    // Header row – đúng thứ tự yêu cầu
+    const rows = [[
+      'STT',
+      'Họ và tên',
+      'Tỉnh/Thành',
+      'Số CCCD',
+      'Ngày tháng năm sinh',
+      'Thường trú',
+      'Ngày cấp CCCD',
+      'Nơi cấp CCCD',
+      'Số tài khoản',
+      'Tên ngân hàng',
+      'Chủ tài khoản',
+      'Số điện thoại',
+      'Ngày nhận việc',
+    ]]
+
+    staff.forEach((u, i) => {
       rows.push([
         i + 1,
-        u.full_name || '',
-        u.username || '',
-        u.phone || '',
-        u.role === 'admin' ? 'Admin' : 'Nhân viên',
-        statusMap[u.account_status] || u.account_status || '',
-        u.province || '',
-        u.cccd_number || '',
-        u.bank_name || '',
-        u.bank_account_number || '',
-        u.created_at ? new Date(u.created_at).toLocaleDateString('vi-VN') : '',
+        u.full_name          || '',
+        u.province           || '',
+        u.cccd_number        || '',
+        fmtDate(u.cccd_dob),
+        u.cccd_address       || '',
+        fmtDate(u.cccd_issue_date),
+        u.cccd_issue_place   || '',
+        u.bank_account_number|| '',
+        u.bank_name          || '',
+        u.bank_account_name  || '',
+        u.phone              || u.username || '',
+        fmtDate(u.start_date),
       ])
     })
+
+    // Build CSV với BOM UTF-8 để Excel nhận đúng tiếng Việt
     const csv = '\uFEFF' + rows.map(r =>
       r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
     ).join('\n')
@@ -607,12 +640,12 @@ window.AdminModule = (() => {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url  = URL.createObjectURL(blob)
     const a    = document.createElement('a')
-    const today = new Date(Date.now() + 7*60*60*1000).toISOString().slice(0,10)
+    const today = new Date(Date.now() + 7*60*60*1000).toISOString().slice(0, 10)
     a.href     = url
     a.download = `danh-sach-nhan-vien-${today}.csv`
     a.click()
     URL.revokeObjectURL(url)
-    Toast.success('Đã xuất file Excel!')
+    Toast.success(`Đã xuất ${staff.length} nhân viên ra file Excel!`)
   }
 
   // ── Load báo cáo ─────────────────────────────
@@ -939,6 +972,9 @@ ${rows || '<div style="text-align:center;padding:60px;color:#9ca3af;font-size:14
               <option value="staff">Nhân viên</option>
               <option value="admin">Admin</option>
             </select></div>
+          <div><label class="block text-sm text-gray-600 mb-1">Ngày nhận việc <span class="text-xs text-gray-400">(không bắt buộc)</span></label>
+            <input type="date" name="start_date"
+              class="w-full px-3 py-2 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-red-500" /></div>
           <p id="add-user-error" class="text-red-500 text-sm hidden"></p>
           <div class="flex gap-3">
             <button type="button" id="add-user-cancel" class="flex-1 py-2 border rounded-xl text-gray-700">Hủy</button>

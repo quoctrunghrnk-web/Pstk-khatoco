@@ -166,6 +166,7 @@ window.ProfileModule = (() => {
       renderInfoRow('Giới tính', data.cccd_gender),
       renderInfoRow('Địa chỉ', data.cccd_address),
       renderInfoRow('Ngày cấp', data.cccd_issue_date),
+      renderInfoRow('Nơi cấp', data.cccd_issue_place),
       renderInfoRow('Ngày hết hạn', data.cccd_expiry_date),
       renderInfoRow('SĐT', data.phone),
     ].join('')
@@ -266,6 +267,7 @@ window.ProfileModule = (() => {
           ${selectField('Giới tính', 'cccd_gender', data?.cccd_gender, ['Nam', 'Nữ', 'Khác'])}
           ${inputField('Địa chỉ thường trú', 'cccd_address', data?.cccd_address)}
           ${inputField('Ngày cấp', 'cccd_issue_date', data?.cccd_issue_date, 'date')}
+          ${inputField('Nơi cấp CCCD', 'cccd_issue_place', data?.cccd_issue_place)}
           ${inputField('Ngày hết hạn', 'cccd_expiry_date', data?.cccd_expiry_date, 'date')}
           ${inputField('Số điện thoại', 'phone', data?.phone, 'tel')}
           <p id="cccd-form-error" class="text-red-500 text-sm hidden"></p>

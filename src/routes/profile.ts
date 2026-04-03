@@ -24,7 +24,7 @@ profile.get('/', async (c) => {
   const data = await c.env.DB.prepare(`
     SELECT u.id, u.username, u.full_name, u.role, u.province,
            p.cccd_number, p.cccd_full_name, p.cccd_dob, p.cccd_gender,
-           p.cccd_address, p.cccd_issue_date, p.cccd_expiry_date,
+           p.cccd_address, p.cccd_issue_date, p.cccd_expiry_date, p.cccd_issue_place,
            p.cccd_front_image, p.cccd_back_image,
            p.bank_account_number, p.bank_name, p.bank_account_name, p.phone,
            p.updated_at
@@ -43,7 +43,7 @@ profile.put('/', async (c) => {
 
   const {
     cccd_number, cccd_full_name, cccd_dob, cccd_gender,
-    cccd_address, cccd_issue_date, cccd_expiry_date,
+    cccd_address, cccd_issue_date, cccd_expiry_date, cccd_issue_place,
     bank_account_number, bank_name, bank_account_name, phone,
     province
   } = body
@@ -63,13 +63,13 @@ profile.put('/', async (c) => {
     await c.env.DB.prepare(`
       UPDATE profiles SET
         cccd_number = ?, cccd_full_name = ?, cccd_dob = ?, cccd_gender = ?,
-        cccd_address = ?, cccd_issue_date = ?, cccd_expiry_date = ?,
+        cccd_address = ?, cccd_issue_date = ?, cccd_expiry_date = ?, cccd_issue_place = ?,
         bank_account_number = ?, bank_name = ?, bank_account_name = ?,
         phone = ?, updated_at = CURRENT_TIMESTAMP
       WHERE user_id = ?
     `).bind(
       cccd_number ?? null, cccd_full_name ?? null, cccd_dob ?? null, cccd_gender ?? null,
-      cccd_address ?? null, cccd_issue_date ?? null, cccd_expiry_date ?? null,
+      cccd_address ?? null, cccd_issue_date ?? null, cccd_expiry_date ?? null, cccd_issue_place ?? null,
       bank_account_number ?? null, bank_name ?? null, bank_account_name ?? null,
       phone ?? null, user.id
     ).run()
@@ -77,12 +77,12 @@ profile.put('/', async (c) => {
     await c.env.DB.prepare(`
       INSERT INTO profiles (
         user_id, cccd_number, cccd_full_name, cccd_dob, cccd_gender,
-        cccd_address, cccd_issue_date, cccd_expiry_date,
+        cccd_address, cccd_issue_date, cccd_expiry_date, cccd_issue_place,
         bank_account_number, bank_name, bank_account_name, phone
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       user.id, cccd_number ?? null, cccd_full_name ?? null, cccd_dob ?? null, cccd_gender ?? null,
-      cccd_address ?? null, cccd_issue_date ?? null, cccd_expiry_date ?? null,
+      cccd_address ?? null, cccd_issue_date ?? null, cccd_expiry_date ?? null, cccd_issue_place ?? null,
       bank_account_number ?? null, bank_name ?? null, bank_account_name ?? null, phone ?? null
     ).run()
   }
