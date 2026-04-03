@@ -83,20 +83,20 @@ app.get('*', (c) => {
 </div>
 <div id="modal-root"></div>
 <div id="toast-root" class="fixed top-4 right-4 z-[9999] space-y-2 pointer-events-none"></div>
-<script src="/static/js/config.js"></script>
-<script src="/static/js/api.js"></script>
-<script src="/static/js/toast.js"></script>
-<script src="/static/js/modal.js"></script>
-<script src="/static/js/camera.js"></script>
-<script src="/static/js/geo.js"></script>
-<script src="/static/js/watermark.js"></script>
-<script src="/static/js/provinces.js"></script>
-<script src="/static/js/auth.js"></script>
-<script src="/static/js/register.js"></script>
-<script src="/static/js/profile.js"></script>
-<script src="/static/js/checkin.js"></script>
-<script src="/static/js/admin.js"></script>
-<script src="/static/js/app.js"></script>
+<script src="/static/js/config.js?v=20260403b"></script>
+<script src="/static/js/api.js?v=20260403b"></script>
+<script src="/static/js/toast.js?v=20260403b"></script>
+<script src="/static/js/modal.js?v=20260403b"></script>
+<script src="/static/js/camera.js?v=20260403b"></script>
+<script src="/static/js/geo.js?v=20260403b"></script>
+<script src="/static/js/watermark.js?v=20260403b"></script>
+<script src="/static/js/provinces.js?v=20260403b"></script>
+<script src="/static/js/auth.js?v=20260403b"></script>
+<script src="/static/js/register.js?v=20260403b"></script>
+<script src="/static/js/profile.js?v=20260403b"></script>
+<script src="/static/js/checkin.js?v=20260403b"></script>
+<script src="/static/js/admin.js?v=20260403b"></script>
+<script src="/static/js/app.js?v=20260403b"></script>
 </body>
 </html>`)
 })
