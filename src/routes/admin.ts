@@ -430,8 +430,17 @@ admin.patch('/products/:id', async (c) => {
 admin.delete('/products/:id', async (c) => {
   const id = parseInt(c.req.param('id'))
   if (isNaN(id)) return c.json(err('ID không hợp lệ'), 400)
-  await c.env.DB.prepare('DELETE FROM products WHERE id = ?').bind(id).run()
-  return c.json(ok(null, 'Đã xóa sản phẩm'))
+  try {
+    const inUse = await c.env.DB.prepare(
+      'SELECT COUNT(*) as cnt FROM checkin_sales WHERE product_id = ?'
+    ).bind(id).first<{ cnt: number }>()
+    if (inUse && inUse.cnt > 0)
+      return c.json(err(`Không thể xóa — sản phẩm đã có ${inUse.cnt} bản ghi doanh số. Hãy tắt hoạt động thay vì xóa.`), 409)
+    await c.env.DB.prepare('DELETE FROM products WHERE id = ?').bind(id).run()
+    return c.json(ok(null, 'Đã xóa sản phẩm'))
+  } catch (e: any) {
+    return c.json(err(e?.message ?? 'Lỗi khi xóa sản phẩm'), 500)
+  }
 })
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -479,8 +488,17 @@ admin.patch('/gifts/:id', async (c) => {
 admin.delete('/gifts/:id', async (c) => {
   const id = parseInt(c.req.param('id'))
   if (isNaN(id)) return c.json(err('ID không hợp lệ'), 400)
-  await c.env.DB.prepare('DELETE FROM gifts WHERE id = ?').bind(id).run()
-  return c.json(ok(null, 'Đã xóa quà tặng'))
+  try {
+    const inUse = await c.env.DB.prepare(
+      'SELECT COUNT(*) as cnt FROM checkin_gifts WHERE gift_id = ?'
+    ).bind(id).first<{ cnt: number }>()
+    if (inUse && inUse.cnt > 0)
+      return c.json(err(`Không thể xóa — quà tặng đã có ${inUse.cnt} bản ghi. Hãy tắt hoạt động thay vì xóa.`), 409)
+    await c.env.DB.prepare('DELETE FROM gifts WHERE id = ?').bind(id).run()
+    return c.json(ok(null, 'Đã xóa quà tặng'))
+  } catch (e: any) {
+    return c.json(err(e?.message ?? 'Lỗi khi xóa quà tặng'), 500)
+  }
 })
 
 export default admin

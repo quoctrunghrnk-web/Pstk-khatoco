@@ -29,6 +29,11 @@ app.route('/api/profile', profileRoutes)
 app.route('/api/checkin', checkinRoutes)
 app.route('/api/admin', adminRoutes)
 
+// ── Global error handler (luôn trả JSON, tránh Safari parse lỗi) ─────────
+app.onError((e, c) => {
+  return c.json({ success: false, message: e?.message ?? 'Lỗi server' }, 500)
+})
+
 // ── Health check ─────────────────────────────
 app.get('/api/health', (c) => c.json({ status: 'ok', time: new Date().toISOString() }))
 

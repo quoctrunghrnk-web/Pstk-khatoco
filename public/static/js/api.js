@@ -20,7 +20,12 @@ window.API = (() => {
       body: body ? JSON.stringify(body) : undefined
     })
 
-    const data = await res.json()
+    let data
+    try {
+      data = await res.json()
+    } catch {
+      throw new Error(res.ok ? 'Phản hồi không hợp lệ từ server' : `Lỗi server (${res.status})`)
+    }
     if (!res.ok && data.message) throw new Error(data.message)
     return data
   }
