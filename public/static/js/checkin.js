@@ -334,7 +334,7 @@ window.CheckinModule = (() => {
         <h3 class="text-lg font-bold text-gray-800 mb-1 flex items-center gap-2">
           <i class="fas fa-sign-out-alt text-purple-600"></i>Check-out
         </h3>
-        <p class="text-xs text-gray-400 mb-4">Nhập kết quả bán hàng và chụp ảnh</p>
+        <p class="text-xs text-gray-400 mb-4">Nhập kết quả cửa hàng bán được và chụp ảnh</p>
 
         <!-- Doanh số sản phẩm -->
         <div class="mb-4">

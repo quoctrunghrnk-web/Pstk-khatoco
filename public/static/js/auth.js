@@ -61,8 +61,8 @@ window.Auth = (() => {
                 <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt"
                   class="w-24 h-24 object-contain" />
               </div>
-              <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Nhân Viên Thị Trường</h1>
-              <p class="text-gray-500 text-sm mt-1.5">Hệ thống quản lý chấm công & hoạt động</p>
+              <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Nhân Viên Khảo Sát Thị Trường</h1>
+              <p class="text-gray-500 text-sm mt-1.5">Hệ thống thống kê & giám sát trưng bày sản phẩm</p>
             </div>
           </div>
 
@@ -123,6 +123,16 @@ window.Auth = (() => {
             <p class="text-gray-400 text-xs">v${APP_CONFIG.VERSION}</p>
             <p class="text-gray-400 text-xs">Phát triển bởi <a href="https://nhankiet.vn" class="text-red-500 font-semibold hover:underline">nhankiet.vn</a></p>
             <p class="text-gray-400 text-xs">© 2026 Nhân Kiệt. All rights reserved.</p>
+          </div>
+
+          <!-- Disclaimer -->
+          <div class="mt-5 mx-auto max-w-sm bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+            <p class="text-xs text-amber-700 font-semibold mb-1 flex items-center gap-1.5">
+              <i class="fas fa-exclamation-triangle text-amber-500"></i>Tuyên bố miễn trách nhiệm
+            </p>
+            <p class="text-xs text-amber-600 leading-relaxed">
+              Phần mềm này chỉ phục vụ mục đích <strong>thống kê và giám sát trưng bày sản phẩm</strong>. Các nhân sự thực hiện dịch vụ cam kết tuyệt đối không thực hiện bất kỳ hành vi nào nhằm mục đích quảng cáo, tiếp thị, tư vấn bán hàng đối với các sản phẩm thuốc lá. <strong>Công ty không chịu trách nhiệm dưới bất kỳ hình thức nào</strong> nếu vi phạm cam kết này.
+            </p>
           </div>
         </div>
       </div>

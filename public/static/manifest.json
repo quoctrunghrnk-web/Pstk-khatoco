@@ -1,7 +1,7 @@
 {
-  "name": "Nhân Viên Thị Trường",
-  "short_name": "NVTT",
-  "description": "Ứng dụng quản lý nhân viên thị trường",
+  "name": "Nhân Viên Khảo Sát Thị Trường",
+  "short_name": "NVKSTT",
+  "description": "Ứng dụng thống kê và giám sát trưng bày sản phẩm thị trường",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1e3a5f",

@@ -185,7 +185,7 @@ window.RegisterModule = (() => {
           </button>
           <div class="flex-1">
             <h1 class="text-base font-bold text-gray-900">Đăng ký tài khoản</h1>
-            <p class="text-gray-400 text-xs">Nhân Viên Thị Trường · Nhân Kiệt</p>
+            <p class="text-gray-400 text-xs">Nhân Viên Khảo Sát Thị Trường · Nhân Kiệt</p>
           </div>
           <div class="bg-white rounded-xl shadow border border-gray-100 p-1 flex-shrink-0">
             <img src="https://nhankiet.vn/uploads/01_Logo/Logo%20khong%20nen.jpg" alt="Nhân Kiệt"

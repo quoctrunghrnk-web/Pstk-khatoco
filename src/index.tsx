@@ -50,7 +50,7 @@ app.get('*', (c) => {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Nhân Viên Thị Trường</title>
+  <title>Nhân Viên Khảo Sát Thị Trường</title>
   <meta name="theme-color" content="#1e3a5f" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" />
   <script src="https://cdn.tailwindcss.com"></script>
@@ -72,10 +72,18 @@ app.get('*', (c) => {
       </div>
       <!-- Accent bar -->
       <div class="w-20 h-1.5 bg-gradient-to-r from-red-500 to-orange-400 rounded-full mb-5"></div>
-      <h1 class="text-xl font-bold text-gray-800 mb-1.5 tracking-tight">Nhân Viên Thị Trường</h1>
+      <h1 class="text-xl font-bold text-gray-800 mb-1.5 tracking-tight">Nhân Viên Khảo Sát Thị Trường</h1>
       <p class="text-gray-400 text-sm">Đang tải<span class="animate-pulse">...</span></p>
     </div>
-    <div class="text-center pb-6 text-xs space-y-0.5">
+    <div class="text-center pb-6 text-xs space-y-0.5 px-6">
+      <div class="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-3 text-left">
+        <p class="text-amber-700 font-semibold mb-0.5 flex items-center gap-1">
+          <i class="fas fa-exclamation-triangle text-amber-500 text-xs"></i>Tuyên bố miễn trách nhiệm
+        </p>
+        <p class="text-amber-600 leading-relaxed" style="font-size:10px">
+          Phần mềm chỉ phục vụ mục đích thống kê và giám sát trưng bày sản phẩm. Nhân sự tuyệt đối không thực hiện bất kỳ hành vi quảng cáo, tiếp thị, tư vấn bán hàng thuốc lá. Công ty không chịu trách nhiệm dưới bất kỳ hình thức nào nếu vi phạm.
+        </p>
+      </div>
       <p class="text-gray-400">Phát triển bởi <a href="https://nhankiet.vn" class="text-red-500 font-semibold">nhankiet.vn</a></p>
       <p class="text-gray-400">© 2026 Nhân Kiệt. All rights reserved.</p>
     </div>
