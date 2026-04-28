@@ -812,11 +812,6 @@ window.AdminModule = (() => {
       const ci2 = r.checkin_image2  || null
       const co1 = r.checkout_image1 || null
       const co2 = r.checkout_image2 || null
-      const ac1 = r.activity_image1 || null
-      const ac2 = r.activity_image2 || null
-      const ac3 = r.activity_image3 || null
-      const ac4 = r.activity_image4 || null
-
       const ciTime = r.checkin_time  ? formatTime(r.checkin_time)  : '--:--'
       const coTime = r.checkout_time ? formatTime(r.checkout_time) : '--:--'
 
@@ -843,7 +838,7 @@ window.AdminModule = (() => {
     </div>
   </div>
 
-  <!-- 3 cột ảnh -->
+  <!-- Ảnh check-in / check-out -->
   <div class="photo-cols">
     <!-- CHECK IN -->
     <div class="photo-col">
@@ -859,19 +854,7 @@ window.AdminModule = (() => {
       <div class="photo-col-title checkout-title" style="margin-top:4px;">CHECK OUT</div>
     </div>
 
-    <!-- HOẠT ĐỘNG BÁN HÀNG -->
-    <div class="photo-col activity-col">
-      <div class="photo-col-title activity-title">HOẠT ĐỘNG BÁN HÀNG</div>
-      <div class="photo-2grid">
-        ${photoBox(ac1)}
-        ${photoBox(ac2)}
-      </div>
-      <div class="photo-2grid" style="margin-top:6px;">
-        ${photoBox(ac3)}
-        ${photoBox(ac4)}
-      </div>
     </div>
-  </div>
 
   <div class="slide-num">${slideIdx++}</div>
 </div>`
@@ -1009,15 +992,11 @@ body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
 }
 .checkin-title{ color:#C00000; }
 .checkout-title{ color:#C00000; margin-top:auto; }
-.activity-title{ color:#C00000; }
 
 .photo-2grid{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:3mm;
-  flex:1;
-}
-.activity-col .photo-2grid{
   flex:1;
 }
 
@@ -1220,10 +1199,6 @@ ${detailSlides || '<div style="text-align:center;padding:40px;color:#aaa;">Khôn
             ${r.notes?`<p class="text-sm text-gray-600"><i class="fas fa-sticky-note mr-1"></i>${r.notes}</p>`:''}
             <div class="grid grid-cols-2 gap-2">
               ${imgRow('Check-in 1',r.checkin_image1)}${imgRow('Check-in 2',r.checkin_image2)}
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              ${imgRow('HĐ 1',r.activity_image1)}${imgRow('HĐ 2',r.activity_image2)}
-              ${imgRow('HĐ 3',r.activity_image3)}${imgRow('HĐ 4',r.activity_image4)}
             </div>
             <div class="grid grid-cols-2 gap-2">
               ${imgRow('Check-out 1',r.checkout_image1)}${imgRow('Check-out 2',r.checkout_image2)}

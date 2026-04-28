@@ -25,9 +25,7 @@ CREATE TABLE IF NOT EXISTS gifts (
 -- Seed sản phẩm mặc định
 INSERT OR IGNORE INTO products (name, unit, sort_order) VALUES
   ('White Horse',      'thùng', 1),
-  ('White Horse Demi', 'thùng', 2),
-  ('Yett',             'thùng', 3),
-  ('Yett Demi',        'thùng', 4);
+  ('White Horse Demi', 'thùng', 2);
 
 -- Seed quà tặng mặc định
 INSERT OR IGNORE INTO gifts (name, unit, sort_order) VALUES

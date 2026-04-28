@@ -232,7 +232,6 @@ admin.get('/checkins', async (c) => {
            c.checkin_address, c.checkout_address,
            c.checkin_image1, c.checkin_image2,
            c.checkout_image1, c.checkout_image2,
-           c.activity_image1, c.activity_image2, c.activity_image3, c.activity_image4,
            c.sales_quantity, c.notes, c.status,
            u.id AS user_id, u.full_name, u.username, u.province
     FROM checkins c

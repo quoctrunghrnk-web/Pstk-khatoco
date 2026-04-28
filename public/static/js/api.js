@@ -45,7 +45,6 @@ window.API = (() => {
 
     // Checkin
     checkinStart: (data) => request('POST', '/checkin/start', data),
-    updateActivity: (data) => request('POST', '/checkin/activity', data),
     checkinEnd: (data) => request('POST', '/checkin/end', data),
     getToday: () => request('GET', '/checkin/today'),
     getHistory: (page = 1, limit = 10) => request('GET', `/checkin/history?page=${page}&limit=${limit}`),

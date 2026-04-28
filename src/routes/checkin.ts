@@ -1,7 +1,6 @@
 // =============================================
 // Module: Check-in / Check-out Routes
 // POST /api/checkin/start        - Check in (tạo lượt mới)
-// POST /api/checkin/activity     - Cập nhật ảnh hoạt động
 // POST /api/checkin/end          - Check out
 // GET  /api/checkin/today        - Tất cả lượt hôm nay
 // GET  /api/checkin/active       - Lượt đang check-in (chưa checkout)
@@ -108,40 +107,6 @@ checkin.post('/start', async (c) => {
   return c.json(ok({ id: result.meta.last_row_id, date: today, store_name: store_name.trim() }, 'Check-in thành công'))
 })
 
-// ── POST /api/checkin/activity ─────────────────────────────────────────────
-checkin.post('/activity', async (c) => {
-  const user  = c.get('user')
-  const today = getTodayVN()
-  const body  = await c.req.json()
-
-  // Lấy lượt đang checkin (chưa checkout) hôm nay
-  const record = await c.env.DB.prepare(
-    `SELECT id, status FROM checkins WHERE user_id = ? AND date = ? AND status = 'checkin' LIMIT 1`
-  ).bind(user.id, today).first<{ id: number; status: string }>()
-
-  if (!record) return c.json(err('Không có lượt check-in nào đang hoạt động'), 400)
-
-  const { image1, image2, image3, image4 } = body
-  const imgs: [string | null | undefined, string][] = [
-    [image1, 'Ảnh HĐ 1'], [image2, 'Ảnh HĐ 2'],
-    [image3, 'Ảnh HĐ 3'], [image4, 'Ảnh HĐ 4'],
-  ]
-  const imgErr = validateImages(imgs.filter(([img]) => img != null) as [string, string][])
-  if (imgErr) return c.json(err(imgErr), 400)
-
-  await c.env.DB.prepare(`
-    UPDATE checkins SET
-      activity_image1 = COALESCE(?, activity_image1),
-      activity_image2 = COALESCE(?, activity_image2),
-      activity_image3 = COALESCE(?, activity_image3),
-      activity_image4 = COALESCE(?, activity_image4),
-      updated_at = CURRENT_TIMESTAMP
-    WHERE id = ?
-  `).bind(image1 ?? null, image2 ?? null, image3 ?? null, image4 ?? null, record.id).run()
-
-  return c.json(ok(null, 'Cập nhật ảnh hoạt động thành công'))
-})
-
 // ── POST /api/checkin/end ──────────────────────────────────────────────────
 checkin.post('/end', async (c) => {
   const user  = c.get('user')
@@ -163,18 +128,7 @@ checkin.post('/end', async (c) => {
   const imgErr = validateImages([[image1, 'Ảnh 1'], [image2, 'Ảnh 2']])
   if (imgErr) return c.json(err(imgErr), 400)
 
-  // Doanh số bắt buộc (phải có ít nhất 1 sản phẩm > 0)
   const salesArr: { product_id: number; quantity: number }[] = Array.isArray(sales) ? sales : []
-  const hasAnySale = salesArr.some(s => s.quantity > 0)
-  if (!hasAnySale) return c.json(err('Vui lòng nhập doanh số ít nhất 1 sản phẩm'), 400)
-
-  // Ảnh hoạt động bắt buộc
-  const actRecord = await c.env.DB.prepare(
-    `SELECT activity_image1 FROM checkins WHERE id = ?`
-  ).bind(record.id).first<{ activity_image1: string | null }>()
-  if (!actRecord?.activity_image1) {
-    return c.json(err('Vui lòng chụp ít nhất 1 ảnh hoạt động trước khi check-out'), 400)
-  }
 
   // Tính tổng doanh số
   const totalQty = salesArr.reduce((sum, s) => sum + (s.quantity || 0), 0)
