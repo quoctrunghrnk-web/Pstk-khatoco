@@ -87,12 +87,20 @@ admin.post('/users', async (c) => {
 })
 
 // ── PUT /api/admin/users/:id ──────────────────────────────────────────────
+// Cập nhật thông tin nhân viên: users + profiles (CCCD, ngân hàng, SĐT, ...)
 admin.put('/users/:id', async (c) => {
   const id = parseInt(c.req.param('id'))
   if (isNaN(id)) return c.json(err('ID không hợp lệ'), 400)
 
   const body = await c.req.json()
-  const { full_name, role, is_active, account_status, province, start_date } = body
+  const {
+    full_name, role, is_active, account_status, province, start_date,
+    // profile fields
+    phone,
+    cccd_number, cccd_full_name, cccd_dob, cccd_gender,
+    cccd_address, cccd_issue_date, cccd_expiry_date, cccd_issue_place,
+    bank_account_number, bank_name, bank_account_name,
+  } = body
 
   // Validate account_status nếu có
   const validStatuses = ['pending', 'active', 'resigned']
@@ -109,6 +117,7 @@ admin.put('/users/:id', async (c) => {
     }
   }
 
+  // Cập nhật bảng users
   await c.env.DB.prepare(`
     UPDATE users SET
       full_name      = COALESCE(?, full_name),
@@ -128,6 +137,76 @@ admin.put('/users/:id', async (c) => {
     start_date     ?? null,
     id
   ).run()
+
+  // Cập nhật / tạo profile nếu có bất kỳ trường profile nào được gửi
+  const hasProfileFields = [
+    phone, cccd_number, cccd_full_name, cccd_dob, cccd_gender,
+    cccd_address, cccd_issue_date, cccd_expiry_date, cccd_issue_place,
+    bank_account_number, bank_name, bank_account_name,
+  ].some(v => v !== undefined)
+
+  if (hasProfileFields) {
+    const existingProfile = await c.env.DB.prepare(
+      'SELECT id FROM profiles WHERE user_id = ?'
+    ).bind(id).first<{ id: number }>()
+
+    if (existingProfile) {
+      await c.env.DB.prepare(`
+        UPDATE profiles SET
+          phone                = COALESCE(?, phone),
+          cccd_number          = COALESCE(?, cccd_number),
+          cccd_full_name       = COALESCE(?, cccd_full_name),
+          cccd_dob             = COALESCE(?, cccd_dob),
+          cccd_gender          = COALESCE(?, cccd_gender),
+          cccd_address         = COALESCE(?, cccd_address),
+          cccd_issue_date      = COALESCE(?, cccd_issue_date),
+          cccd_expiry_date     = COALESCE(?, cccd_expiry_date),
+          cccd_issue_place     = COALESCE(?, cccd_issue_place),
+          bank_account_number  = COALESCE(?, bank_account_number),
+          bank_name            = COALESCE(?, bank_name),
+          bank_account_name    = COALESCE(?, bank_account_name),
+          updated_at           = CURRENT_TIMESTAMP
+        WHERE user_id = ?
+      `).bind(
+        phone                ?? null,
+        cccd_number          ?? null,
+        cccd_full_name       ?? null,
+        cccd_dob             ?? null,
+        cccd_gender          ?? null,
+        cccd_address         ?? null,
+        cccd_issue_date      ?? null,
+        cccd_expiry_date     ?? null,
+        cccd_issue_place     ?? null,
+        bank_account_number  ?? null,
+        bank_name            ?? null,
+        bank_account_name    ?? null,
+        id
+      ).run()
+    } else {
+      await c.env.DB.prepare(`
+        INSERT INTO profiles (
+          user_id,
+          phone, cccd_number, cccd_full_name, cccd_dob, cccd_gender,
+          cccd_address, cccd_issue_date, cccd_expiry_date, cccd_issue_place,
+          bank_account_number, bank_name, bank_account_name
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        id,
+        phone                ?? null,
+        cccd_number          ?? null,
+        cccd_full_name       ?? null,
+        cccd_dob             ?? null,
+        cccd_gender          ?? null,
+        cccd_address         ?? null,
+        cccd_issue_date      ?? null,
+        cccd_expiry_date     ?? null,
+        cccd_issue_place     ?? null,
+        bank_account_number  ?? null,
+        bank_name            ?? null,
+        bank_account_name    ?? null,
+      ).run()
+    }
+  }
 
   return c.json(ok(null, 'Cập nhật thành công'))
 })

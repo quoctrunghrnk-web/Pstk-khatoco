@@ -431,6 +431,12 @@ window.AdminModule = (() => {
         </button>`
     }
     const btns = []
+    // Nút sửa thông tin
+    btns.push(`
+      <button onclick="AdminModule.showEditUser(${u.id})"
+        class="p-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100" title="Sửa thông tin">
+        <i class="fas fa-edit text-sm"></i>
+      </button>`)
     if (u.account_status !== 'active') {
       btns.push(`
         <button onclick="AdminModule.setUserStatus(${u.id},'active','${u.full_name.replace(/'/g,"\\'")}' )"
@@ -1146,6 +1152,194 @@ ${detailSlides || '<div style="text-align:center;padding:40px;color:#aaa;">Khôn
     }
   }
 
+  // ── Sửa thông tin nhân viên ────────────────────
+  async function showEditUser(userId) {
+    try {
+      const res = await API.getUserProfile(userId)
+      const u = res.data
+      if (!u) { Toast.error('Không tìm thấy nhân viên'); return }
+
+      const opts = _activeProvinces.map(p =>
+        `<option value="${p.name}" ${p.name === (u.province || '') ? 'selected' : ''}>${p.name}</option>`
+      ).join('')
+
+      const { overlay, close } = Modal.create(`
+        <div class="p-5 max-h-[80vh] overflow-y-auto">
+          <h3 class="text-lg font-bold text-gray-800 mb-1">
+            <i class="fas fa-user-edit mr-2 text-blue-600"></i>Sửa thông tin nhân viên
+          </h3>
+          <p class="text-xs text-gray-400 mb-4">
+            <span class="font-mono">@${u.username || ''}</span>
+            <span class="ml-2 px-1.5 py-0.5 rounded text-xs ${u.account_status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}">
+              ${u.account_status === 'pending' ? 'Chờ kích hoạt' : 'Đang làm việc'}
+            </span>
+          </p>
+          <form id="edit-user-form" class="space-y-3">
+            <!-- Thông tin cơ bản -->
+            <div class="bg-gray-50 rounded-xl p-3 space-y-2.5">
+              <p class="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                <i class="fas fa-user mr-1"></i>Thông tin cơ bản
+              </p>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Họ và tên <span class="text-red-500">*</span></label>
+                <input type="text" name="full_name" value="${u.full_name || ''}" required
+                  class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Số điện thoại</label>
+                <input type="tel" name="phone" value="${u.phone || ''}" placeholder="VD: 0901234567"
+                  class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Tỉnh/Thành làm việc</label>
+                <div class="relative">
+                  <select name="province"
+                    class="w-full pl-3 pr-8 py-2 border border-gray-200 rounded-xl text-sm bg-white
+                           focus:outline-none focus:ring-2 focus:ring-blue-400 appearance-none">
+                    <option value="">-- Chưa phân công --</option>
+                    ${opts}
+                  </select>
+                  <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Ngày nhận việc</label>
+                <input type="date" name="start_date" value="${u.start_date || ''}"
+                  class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+              </div>
+            </div>
+
+            <!-- CCCD -->
+            <div class="bg-gray-50 rounded-xl p-3 space-y-2.5">
+              <p class="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                <i class="fas fa-id-card mr-1"></i>CMND/CCCD
+              </p>
+              <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">Số CCCD</label>
+                  <input type="text" name="cccd_number" value="${u.cccd_number || ''}"
+                    class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">Họ tên trên CCCD</label>
+                  <input type="text" name="cccd_full_name" value="${u.cccd_full_name || ''}"
+                    class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">Ngày sinh</label>
+                  <input type="date" name="cccd_dob" value="${u.cccd_dob || ''}"
+                    class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">Giới tính</label>
+                  <select name="cccd_gender"
+                    class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400">
+                    <option value="">-- Chọn --</option>
+                    <option value="Nam" ${u.cccd_gender === 'Nam' ? 'selected' : ''}>Nam</option>
+                    <option value="Nữ" ${u.cccd_gender === 'Nữ' ? 'selected' : ''}>Nữ</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Địa chỉ thường trú</label>
+                <input type="text" name="cccd_address" value="${u.cccd_address || ''}"
+                  class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+              </div>
+              <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">Ngày cấp</label>
+                  <input type="date" name="cccd_issue_date" value="${u.cccd_issue_date || ''}"
+                    class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">Ngày hết hạn</label>
+                  <input type="date" name="cccd_expiry_date" value="${u.cccd_expiry_date || ''}"
+                    class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Nơi cấp</label>
+                <input type="text" name="cccd_issue_place" value="${u.cccd_issue_place || ''}"
+                  class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+              </div>
+            </div>
+
+            <!-- Ngân hàng -->
+            <div class="bg-gray-50 rounded-xl p-3 space-y-2.5">
+              <p class="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                <i class="fas fa-university mr-1"></i>Thông tin ngân hàng
+              </p>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Tên ngân hàng</label>
+                <input type="text" name="bank_name" value="${u.bank_name || ''}"
+                  class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Số tài khoản</label>
+                <input type="text" name="bank_account_number" value="${u.bank_account_number || ''}"
+                  class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Chủ tài khoản</label>
+                <input type="text" name="bank_account_name" value="${u.bank_account_name || ''}"
+                  class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400" />
+              </div>
+            </div>
+
+            <p id="edit-user-error" class="text-red-500 text-sm hidden"></p>
+            <div class="flex gap-3 pt-1">
+              <button type="button" id="edit-user-cancel" class="flex-1 py-2.5 border border-gray-200 rounded-xl text-gray-700 font-medium">Hủy</button>
+              <button type="submit" class="flex-1 py-2.5 bg-blue-600 text-white rounded-xl font-semibold">
+                <i class="fas fa-save mr-1"></i>Lưu thay đổi
+              </button>
+            </div>
+          </form>
+        </div>
+      `)
+
+      document.getElementById('edit-user-cancel').onclick = close
+      document.getElementById('edit-user-form').onsubmit = async (e) => {
+        e.preventDefault()
+        const fd = new FormData(e.target)
+        const data = Object.fromEntries(fd.entries())
+        // Loại bỏ các trường rỗng để không ghi đè dữ liệu cũ bằng chuỗi rỗng
+        // Trừ các trường có thể xóa (để trống để xóa)
+        const cleaned = {}
+        for (const [k, v] of Object.entries(data)) {
+          if (v !== '') {
+            cleaned[k] = v
+          } else {
+            // Với các trường có thể xóa, gửi null để backend COALESCE không làm gì
+            // nhưng với các trường có thể muốn xóa, ta gửi chuỗi rỗng
+            cleaned[k] = null
+          }
+        }
+        // Luôn gửi full_name
+        if (!cleaned.full_name || !cleaned.full_name.trim()) {
+          document.getElementById('edit-user-error').textContent = 'Vui lòng nhập họ và tên'
+          document.getElementById('edit-user-error').classList.remove('hidden')
+          return
+        }
+
+        try {
+          await API.updateUser(userId, cleaned)
+          Toast.success('Cập nhật thông tin thành công')
+          close()
+          const prov = document.getElementById('staff-province-filter')?.value || ''
+          const search = document.getElementById('staff-search-input')?.value || ''
+          await loadUsers(prov, search)
+        } catch (err) {
+          document.getElementById('edit-user-error').textContent = err.message
+          document.getElementById('edit-user-error').classList.remove('hidden')
+        }
+      }
+    } catch (e) {
+      Toast.error(e.message || 'Không tải được thông tin nhân viên')
+    }
+  }
+
   // ── Đổi trạng thái NV ────────────────────────
   function setUserStatus(userId, newStatus, name) {
     const labels = { active:'Đang làm việc', pending:'Chờ kích hoạt', resigned:'Đã nghỉ việc' }
@@ -1529,7 +1723,7 @@ ${detailSlides || '<div style="text-align:center;padding:40px;color:#aaa;">Khôn
 
   return {
     renderPage, bindEvents,
-    showResetPassword, setUserStatus, showCheckinDetail,
+    showResetPassword, setUserStatus, showCheckinDetail, showEditUser,
     confirmDeleteProvince,
     editProduct, deleteProduct,
     editGift, deleteGift,
