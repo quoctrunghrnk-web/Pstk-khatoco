@@ -59,6 +59,7 @@ app.get('*', (c) => {
   <meta name="theme-color" content="#1e3a5f" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="/static/css/app.css" />
 </head>
 <body class="bg-gray-50 min-h-screen">

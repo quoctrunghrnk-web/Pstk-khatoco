@@ -581,7 +581,7 @@ window.AdminModule = (() => {
     }
   }
 
-  // ── Xuất Excel danh sách NV ───────────────────
+  // ── Xuất Excel danh sách NV (.xlsx) ────────────
   function exportStaffExcel() {
     if (!_allUsers.length) {
       Toast.error('Chưa có dữ liệu nhân viên'); return
@@ -593,64 +593,46 @@ window.AdminModule = (() => {
       Toast.error('Không có nhân viên để xuất'); return
     }
 
-    // Helper: format date YYYY-MM-DD → DD/MM/YYYY
     const fmtDate = (d) => {
       if (!d) return ''
-      // hỗ trợ cả ISO datetime (2026-04-03T...) lẫn date thuần (2026-04-03)
       const s = String(d).slice(0, 10)
       const [y, m, dd] = s.split('-')
       if (!y || !m || !dd) return d
       return `${dd}/${m}/${y}`
     }
 
-    // Header row – đúng thứ tự yêu cầu
-    const rows = [[
-      'STT',
-      'Họ và tên',
-      'Tỉnh/Thành',
-      'Số CCCD',
-      'Ngày tháng năm sinh',
-      'Thường trú',
-      'Ngày cấp CCCD',
-      'Nơi cấp CCCD',
-      'Số tài khoản',
-      'Tên ngân hàng',
-      'Chủ tài khoản',
-      'Số điện thoại',
-      'Ngày nhận việc',
-    ]]
+    const wb = XLSX.utils.book_new()
+    const headers = [
+      'STT', 'Họ và tên', 'Tỉnh/Thành', 'Số CCCD',
+      'Ngày tháng năm sinh', 'Thường trú', 'Ngày cấp CCCD', 'Nơi cấp CCCD',
+      'Số tài khoản', 'Tên ngân hàng', 'Chủ tài khoản', 'Số điện thoại', 'Ngày nhận việc',
+    ]
+    const rows = staff.map((u, i) => [
+      i + 1,
+      u.full_name || '',
+      u.province || '',
+      u.cccd_number ? `'${u.cccd_number}` : '',
+      fmtDate(u.cccd_dob),
+      u.cccd_address || '',
+      fmtDate(u.cccd_issue_date),
+      u.cccd_issue_place || '',
+      u.bank_account_number ? `'${u.bank_account_number}` : '',
+      u.bank_name || '',
+      u.bank_account_name || '',
+      u.phone ? `'${u.phone}` : u.username ? `'${u.username}` : '',
+      fmtDate(u.start_date),
+    ])
 
-    staff.forEach((u, i) => {
-      rows.push([
-        i + 1,
-        u.full_name          || '',
-        u.province           || '',
-        u.cccd_number        || '',
-        fmtDate(u.cccd_dob),
-        u.cccd_address       || '',
-        fmtDate(u.cccd_issue_date),
-        u.cccd_issue_place   || '',
-        u.bank_account_number|| '',
-        u.bank_name          || '',
-        u.bank_account_name  || '',
-        u.phone              || u.username || '',
-        fmtDate(u.start_date),
-      ])
-    })
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
+    ws['!cols'] = [
+      { wch: 5 }, { wch: 28 }, { wch: 22 }, { wch: 18 },
+      { wch: 16 }, { wch: 40 }, { wch: 16 }, { wch: 30 },
+      { wch: 18 }, { wch: 22 }, { wch: 28 }, { wch: 15 }, { wch: 16 },
+    ]
 
-    // Build CSV với BOM UTF-8 để Excel nhận đúng tiếng Việt
-    const csv = '\uFEFF' + rows.map(r =>
-      r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
-    ).join('\n')
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a')
+    XLSX.utils.book_append_sheet(wb, ws, 'Danh sách nhân viên')
     const today = new Date(Date.now() + 7*60*60*1000).toISOString().slice(0, 10)
-    a.href     = url
-    a.download = `danh-sach-nhan-vien-${today}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    XLSX.writeFile(wb, `danh-sach-nhan-vien-${today}.xlsx`)
     Toast.success(`Đã xuất ${staff.length} nhân viên ra file Excel!`)
   }
 
