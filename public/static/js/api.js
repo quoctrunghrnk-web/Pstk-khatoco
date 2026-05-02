@@ -26,6 +26,12 @@ window.API = (() => {
     } catch {
       throw new Error(res.ok ? 'Phản hồi không hợp lệ từ server' : `Lỗi server (${res.status})`)
     }
+    if (res.status === 401) {
+      localStorage.removeItem(APP_CONFIG.TOKEN_KEY)
+      localStorage.removeItem(APP_CONFIG.USER_KEY)
+      if (window.App) window.App.navigate('login')
+      throw new Error(data.message || 'Phiên đăng nhập đã hết hạn')
+    }
     if (!res.ok && data.message) throw new Error(data.message)
     return data
   }

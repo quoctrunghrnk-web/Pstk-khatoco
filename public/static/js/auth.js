@@ -26,7 +26,24 @@ window.Auth = (() => {
   }
 
   function isLoggedIn() {
-    return !!localStorage.getItem(APP_CONFIG.TOKEN_KEY)
+    const token = localStorage.getItem(APP_CONFIG.TOKEN_KEY)
+    if (!token) return false
+    try {
+      const parts = token.split('.')
+      if (parts.length !== 3) { clearSession(); return false }
+      const body = parts[1]
+      const pad = body.length % 4 === 0 ? '' : '===='.slice(body.length % 4)
+      const decoded = atob((body + pad).replace(/-/g, '+').replace(/_/g, '/'))
+      const payload = JSON.parse(decoded)
+      if (payload.exp && Date.now() / 1000 > payload.exp) {
+        clearSession()
+        return false
+      }
+      return true
+    } catch {
+      clearSession()
+      return false
+    }
   }
 
   async function login(username, password) {
