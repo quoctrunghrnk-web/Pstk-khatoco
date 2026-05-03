@@ -752,7 +752,6 @@ window.AdminModule = (() => {
     // ── Slide 1: Trang bìa / Tổng hợp ──────────────────────────
     const slide1 = `
 <div class="slide slide-cover">
-  <div class="cover-logo-area">LOGO KHATOCO<br/><span style="font-size:9px;opacity:.6;">(update sau)</span></div>
   <div class="cover-body">
     <div class="cover-title">BÁO CÁO NGHIỆM THU</div>
     <div class="cover-sub">DỰ ÁN PST</div>
@@ -800,14 +799,9 @@ window.AdminModule = (() => {
       const ci2 = r.checkin_image2  || null
       const co1 = r.checkout_image1 || null
       const co2 = r.checkout_image2 || null
-      const ciTime = r.checkin_time  ? formatTime(r.checkin_time)  : '--:--'
-      const coTime = r.checkout_time ? formatTime(r.checkout_time) : '--:--'
 
       const html = `
 <div class="slide slide-detail">
-  <!-- Logo góc phải -->
-  <div class="detail-logo-area">LOGO KHATOCO<br/><span style="font-size:7px;opacity:.6;">(update sau)</span></div>
-
   <!-- Header nhân viên -->
   <div class="detail-seq-badge">${staffSeq}</div>
   <div class="detail-header">
@@ -817,32 +811,29 @@ window.AdminModule = (() => {
       <span class="detail-store-num">${storeSeq}</span>
     </div>
     <div class="detail-addr">Địa chỉ: ${r.checkin_address || '--'}</div>
-    <div class="detail-times">
-      <span>Check-in: <b>${ciTime}</b></span>
-      <span style="margin:0 8px;opacity:.4;">|</span>
-      <span>Check-out: <b>${coTime}</b></span>
-      ${r.sales_quantity != null ? `<span style="margin:0 8px;opacity:.4;">|</span><span>Tổng bán: <b style="color:#c0392b;">${r.sales_quantity} gói</b></span>` : ''}
-      ${r.notes ? `<span style="margin:0 8px;opacity:.4;">|</span><span style="color:#6b7280;">Ghi chú: ${r.notes}</span>` : ''}
-    </div>
+    ${r.sales_quantity != null ? `<div class="detail-sales">Tổng bán: <b>${r.sales_quantity} gói</b></div>` : ''}
+    ${r.notes ? `<div class="detail-notes">Ghi chú: ${r.notes}</div>` : ''}
   </div>
 
-  <!-- Ảnh check-in / check-out -->
-  <div class="photo-cols">
-    <!-- CHECK IN -->
-    <div class="photo-col">
-      <div class="photo-col-title checkin-title">CHECK IN</div>
-      <div class="photo-2grid">
-        ${photoBox(ci1)}
-        ${photoBox(ci2)}
-      </div>
-      <div class="photo-2grid" style="margin-top:6px;">
-        ${photoBox(co1)}
-        ${photoBox(co2)}
-      </div>
-      <div class="photo-col-title checkout-title" style="margin-top:4px;">CHECK OUT</div>
+  <!-- Ảnh check-in / check-out: 2x2 grid -->
+  <div class="photo-grid">
+    <div class="photo-cell">
+      <div class="photo-label ci-label">CHECK IN</div>
+      <div class="photo-wrap">${photoBox(ci1)}</div>
     </div>
-
+    <div class="photo-cell">
+      <div class="photo-label ci-label">CHECK IN</div>
+      <div class="photo-wrap">${photoBox(ci2)}</div>
     </div>
+    <div class="photo-cell">
+      <div class="photo-label co-label">CHECK OUT</div>
+      <div class="photo-wrap">${photoBox(co1)}</div>
+    </div>
+    <div class="photo-cell">
+      <div class="photo-label co-label">CHECK OUT</div>
+      <div class="photo-wrap">${photoBox(co2)}</div>
+    </div>
+  </div>
 
   <div class="slide-num">${slideIdx++}</div>
 </div>`
@@ -874,21 +865,9 @@ body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
   flex-direction:column;
   padding:12mm 14mm 10mm;
 }
-.cover-logo-area{
-  position:absolute;
-  top:8mm;right:10mm;
-  width:38mm;height:28mm;
-  background:#f3f3f3;
-  border:1px dashed #bbb;
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  font-size:9px;font-weight:700;text-align:center;color:#555;
-  border-radius:4px;
-}
 .cover-body{
   flex:1;
   display:flex;flex-direction:column;justify-content:flex-start;
-  padding-right:50mm;
 }
 .cover-title{
   font-size:26pt;font-weight:900;color:#C00000;
@@ -925,17 +904,6 @@ body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
 .slide-detail{
   padding:4mm 5mm 4mm;
 }
-.detail-logo-area{
-  position:absolute;
-  top:4mm;right:5mm;
-  width:32mm;height:22mm;
-  background:#f3f3f3;
-  border:1px dashed #bbb;
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  font-size:8px;font-weight:700;text-align:center;color:#555;
-  border-radius:4px;
-}
 .detail-seq-badge{
   position:absolute;
   top:4mm;left:4mm;
@@ -947,7 +915,6 @@ body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
 }
 .detail-header{
   margin-left:12mm;
-  padding-right:40mm;
   margin-bottom:2mm;
 }
 .detail-name{font-size:12pt;font-weight:900;line-height:1.2;}
@@ -959,48 +926,52 @@ body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
   border-radius:50%;font-size:7pt;font-weight:800;margin-left:2mm;
 }
 .detail-addr{font-size:9pt;color:#444;line-height:1.3;}
-.detail-times{font-size:9pt;color:#333;margin-top:1mm;line-height:1.4;}
+.detail-sales{font-size:9pt;color:#c0392b;margin-top:1mm;line-height:1.4;}
+.detail-notes{font-size:9pt;color:#6b7280;line-height:1.4;}
 
-/* ── 3-column photo layout ── */
-.photo-cols{
-  display:grid;
-  grid-template-columns:1fr 1fr;   /* LEFT: CI+CO | RIGHT: Activity */
-  gap:5mm;
-  height:128mm;   /* chiếm phần còn lại của slide sau header */
-  margin-top:1mm;
-}
-.photo-col{
-  display:flex;flex-direction:column;
-}
-.photo-col-title{
-  font-size:9pt;font-weight:800;
-  margin-bottom:2mm;
-  text-transform:uppercase;
-  letter-spacing:.3px;
-}
-.checkin-title{ color:#C00000; }
-.checkout-title{ color:#C00000; margin-top:auto; }
-
-.photo-2grid{
+/* ── 2x2 photo grid ── */
+.photo-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
+  grid-template-rows:1fr 1fr;
   gap:3mm;
-  flex:1;
+  height:142mm;
+  margin-top:2mm;
 }
+.photo-cell{
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  overflow:hidden;
+}
+.photo-label{
+  font-size:8pt;font-weight:800;
+  padding:1mm 2mm;
+  text-transform:uppercase;
+  letter-spacing:.3px;
+  flex-shrink:0;
+}
+.ci-label{ color:#C00000; }
+.co-label{ color:#C00000; }
 
-.photo-img{
+.photo-wrap{
+  flex:1;
+  min-height:0;
+  overflow:hidden;
+  border-radius:3px;
+}
+.photo-wrap .photo-img{
   width:100%;height:100%;
   object-fit:cover;
   border-radius:3px;
   border:1px solid #ddd;
   display:block;
 }
-.photo-empty{
+.photo-wrap .photo-empty{
   width:100%;height:100%;
   background:#f5f5f5;
   border:1.5px dashed #ccc;
   border-radius:3px;
-  min-height:40mm;
 }
 
 /* ── Page number ── */
