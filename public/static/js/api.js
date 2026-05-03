@@ -29,10 +29,13 @@ window.API = (() => {
     if (res.status === 401) {
       localStorage.removeItem(APP_CONFIG.TOKEN_KEY)
       localStorage.removeItem(APP_CONFIG.USER_KEY)
-      if (window.App) window.App.navigate('login')
+      // Không redirect khi đang ở trang login, tránh mất thông báo lỗi
+      if (window.App && !path.startsWith('/auth/login')) {
+        window.App.navigate('login')
+      }
       throw new Error(data.message || 'Phiên đăng nhập đã hết hạn')
     }
-    if (!res.ok && data.message) throw new Error(data.message)
+    if (!res.ok) throw new Error(data.message || `Lỗi server (${res.status})`)
     return data
   }
 

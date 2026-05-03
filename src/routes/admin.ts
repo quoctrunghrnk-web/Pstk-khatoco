@@ -71,7 +71,7 @@ admin.post('/users', async (c) => {
   const hash = await hashPassword(password)
   const start_date = body.start_date || null
   const result = await c.env.DB.prepare(
-    'INSERT INTO users (username, password_hash, full_name, role, start_date) VALUES (?, ?, ?, ?, ?)'
+    'INSERT INTO users (username, password_hash, full_name, role, is_active, account_status, start_date) VALUES (?, ?, ?, ?, 1, \'active\', ?)'
   ).bind(username, hash, full_name, role ?? 'staff', start_date).run()
 
   const newId = result.meta.last_row_id
