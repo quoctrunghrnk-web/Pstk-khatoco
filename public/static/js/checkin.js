@@ -651,10 +651,10 @@ window.CheckinModule = (() => {
       const imgThumb = (label, src) => src
         ? `<div>
              <p class="text-xs text-gray-400 mb-1">${label}</p>
-             <img src="${src}" class="w-full rounded-xl cursor-pointer aspect-square object-cover"
+             <img src="${src}" class="w-full rounded-xl cursor-pointer aspect-[3/4] object-contain bg-black"
                   onclick="Modal.image('${src}')" />
            </div>`
-        : `<div class="aspect-square bg-gray-50 rounded-xl border border-dashed border-gray-200
+        : `<div class="aspect-[3/4] bg-gray-50 rounded-xl border border-dashed border-gray-200
                        flex items-center justify-center">
              <p class="text-xs text-gray-300">${label}</p>
            </div>`

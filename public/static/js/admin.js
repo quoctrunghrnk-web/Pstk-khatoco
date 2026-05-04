@@ -850,7 +850,7 @@ body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
 
 /* ── Slide container ── */
 .slide{
-  width:337mm; height:190mm;       /* 33.87cm × 19.05cm → landscape A4 */
+  width:210mm; height:297mm;       /* A4 portrait */
   background:#fff;
   position:relative;
   overflow:hidden;
@@ -938,7 +938,7 @@ body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
   grid-template-columns:1fr 1fr;
   grid-template-rows:1fr 1fr;
   gap:3mm;
-  height:142mm;
+  height:220mm;
   margin-top:2mm;
 }
 .photo-cell{
@@ -965,9 +965,9 @@ body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
 }
 .photo-wrap .photo-img{
   width:100%;height:100%;
-  object-fit:cover;
+  object-fit:contain;
+  background:#000;
   border-radius:3px;
-  border:1px solid #ddd;
   display:block;
 }
 .photo-wrap .photo-empty{
@@ -988,11 +988,11 @@ body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
 @media print{
   body{background:#fff;}
   @page{
-    size:337mm 190mm landscape;
+    size:210mm 297mm portrait;
     margin:0;
   }
   .slide{
-    width:337mm;height:190mm;
+    width:210mm;height:297mm;
     margin:0;
     box-shadow:none;
     page-break-after:always;
@@ -1323,7 +1323,7 @@ ${detailSlides || '<div style="text-align:center;padding:40px;color:#aaa;">Khôn
       if (!r) return
       const imgRow = (label, src) => src
         ? `<div><p class="text-xs text-gray-500 mb-1">${label}</p>
-             <img src="${src}" class="w-full rounded-lg cursor-pointer" onclick="Modal.image(this.src)" /></div>`
+             <img src="${src}" class="w-full rounded-lg cursor-pointer aspect-[3/4] object-contain bg-black" onclick="Modal.image(this.src)" /></div>`
         : ''
       Modal.create(`
         <div class="p-5">

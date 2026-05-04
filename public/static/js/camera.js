@@ -202,12 +202,12 @@ window.Camera = (() => {
 
     function render() {
       container.innerHTML = photos.map((p, i) => `
-        <div class="photo-slot relative aspect-square rounded-xl overflow-hidden
+        <div class="photo-slot relative aspect-[3/4] rounded-xl overflow-hidden
           border-2 ${p ? 'border-blue-400' : 'border-dashed border-gray-300'}
           bg-gray-100 ${!readonly && !p ? 'cursor-pointer' : ''} select-none"
           data-idx="${i}">
           ${p
-            ? `<img src="${p}" class="w-full h-full object-cover pointer-events-none" />
+            ? `<img src="${p}" class="w-full h-full object-contain pointer-events-none bg-black" />
                ${!readonly ? `
                <button class="remove-photo absolute top-1 right-1 w-7 h-7 bg-red-500
                  text-white rounded-full flex items-center justify-center shadow-md
