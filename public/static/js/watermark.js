@@ -109,7 +109,6 @@ window.Watermark = (() => {
 
         ctx.font = `bold ${fs}px Arial`
 
-        const dtText   = opts.datetime || formatDateTime()
         const addrRaw  = opts.address  ||
           (opts.lat && opts.lng
             ? `${parseFloat(opts.lat).toFixed(5)}, ${parseFloat(opts.lng).toFixed(5)}`
@@ -117,7 +116,7 @@ window.Watermark = (() => {
 
         // Wrap địa chỉ
         const addrLines = wrapText(ctx, addrRaw, innerW)
-        const totalLines = 1 + addrLines.length  // 1 dòng thời gian + n dòng địa chỉ
+        const totalLines = addrLines.length  // chỉ còn dòng địa chỉ
 
         const boxH  = pad + totalLines * lh + pad
         const boxY  = H - boxH - Math.floor(H * 0.01)
@@ -150,14 +149,9 @@ window.Watermark = (() => {
         const iconColor = '#FFFFFF'
         const textX = boxX + pad + iconR * 2 + Math.floor(pad * 0.5)
 
-        // Dòng 1: Thời gian
-        const y0 = boxY + pad + lh * 0.5
-        drawClockIcon(ctx, boxX + pad + iconR, y0, iconR, iconColor)
-        ctx.fillText(dtText, textX, y0, innerW)
-
-        // Dòng 2+: Địa chỉ (wrap)
+        // Chỉ vẽ dòng địa chỉ (không còn dòng thời gian)
         addrLines.forEach((line, i) => {
-          const y = boxY + pad + lh * (1 + i) + lh * 0.5
+          const y = boxY + pad + lh * i + lh * 0.5
           if (i === 0) drawPinIcon(ctx, boxX + pad + iconR, y, iconR, iconColor)
           ctx.fillText(line, textX, y, innerW)
         })
