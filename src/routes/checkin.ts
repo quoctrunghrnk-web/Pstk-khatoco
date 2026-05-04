@@ -47,6 +47,23 @@ function validateImages(images: [string | null | undefined, string][]): string |
   return null
 }
 
+// Retry helper for D1 write contention (SQLite single-writer)
+async function retryDB<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+  for (let i = 0; i < maxRetries; i++) {
+    try { return await fn() }
+    catch (e: any) {
+      if (i === maxRetries - 1) throw e
+      const msg = e?.message ?? ''
+      if (msg.includes('SQLITE_BUSY') || msg.includes('database is locked') || msg.includes('D1_ERROR')) {
+        await new Promise(r => setTimeout(r, Math.pow(2, i) * 200 + Math.random() * 100))
+        continue
+      }
+      throw e
+    }
+  }
+  throw new Error('unreachable')
+}
+
 // ── GET /api/checkin/products ──────────────────────────────────────────────
 checkin.get('/products', async (c) => {
   const rows = await c.env.DB.prepare(
@@ -76,10 +93,13 @@ checkin.post('/start', async (c) => {
     return c.json(err('Vui lòng nhập tên điểm bán'), 400)
   }
 
-  // Kiểm tra còn lượt chưa checkout không
+  // Kiểm tra còn lượt chưa checkout trong 24h qua (không dùng date để tránh midnight bug)
   const pending = await c.env.DB.prepare(
-    `SELECT id, store_name FROM checkins WHERE user_id = ? AND date = ? AND status = 'checkin' LIMIT 1`
-  ).bind(user.id, today).first<{ id: number; store_name: string }>()
+    `SELECT id, store_name FROM checkins
+     WHERE user_id = ? AND status = 'checkin'
+       AND checkin_time > datetime('now', '-24 hours')
+     ORDER BY checkin_time DESC LIMIT 1`
+  ).bind(user.id).first<{ id: number; store_name: string }>()
 
   if (pending) {
     return c.json(err(`Bạn chưa check-out điểm "${pending.store_name}". Hãy check-out trước khi đến điểm mới.`), 400)
@@ -92,7 +112,7 @@ checkin.post('/start', async (c) => {
   const imgErr = validateImages([[image1, 'Ảnh 1'], [image2, 'Ảnh 2']])
   if (imgErr) return c.json(err(imgErr), 400)
 
-  const result = await c.env.DB.prepare(`
+  const result = await retryDB(() => c.env.DB.prepare(`
     INSERT INTO checkins (
       user_id, date, store_name,
       checkin_time, checkin_lat, checkin_lng, checkin_address,
@@ -102,7 +122,7 @@ checkin.post('/start', async (c) => {
     user.id, today, store_name.trim(),
     lat ?? null, lng ?? null, address ?? null,
     image1, image2
-  ).run()
+  ).run())
 
   return c.json(ok({ id: result.meta.last_row_id, date: today, store_name: store_name.trim() }, 'Check-in thành công'))
 })
@@ -110,13 +130,15 @@ checkin.post('/start', async (c) => {
 // ── POST /api/checkin/end ──────────────────────────────────────────────────
 checkin.post('/end', async (c) => {
   const user  = c.get('user')
-  const today = getTodayVN()
   const body  = await c.req.json()
 
-  // Lấy lượt đang checkin hôm nay
+  // Lấy lượt đang checkin gần nhất trong 24h qua (không dùng date để tránh midnight bug)
   const record = await c.env.DB.prepare(
-    `SELECT id, status FROM checkins WHERE user_id = ? AND date = ? AND status = 'checkin' LIMIT 1`
-  ).bind(user.id, today).first<{ id: number; status: string }>()
+    `SELECT id, status FROM checkins
+     WHERE user_id = ? AND status = 'checkin'
+       AND checkin_time > datetime('now', '-24 hours')
+     ORDER BY checkin_time DESC LIMIT 1`
+  ).bind(user.id).first<{ id: number; status: string }>()
 
   if (!record) return c.json(err('Bạn chưa check-in hoặc đã check-out rồi'), 400)
 
@@ -134,7 +156,7 @@ checkin.post('/end', async (c) => {
   const totalQty = salesArr.reduce((sum, s) => sum + (s.quantity || 0), 0)
 
   // Update checkin record
-  await c.env.DB.prepare(`
+  await retryDB(() => c.env.DB.prepare(`
     UPDATE checkins SET
       checkout_time = CURRENT_TIMESTAMP,
       checkout_lat = ?, checkout_lng = ?, checkout_address = ?,
@@ -148,16 +170,16 @@ checkin.post('/end', async (c) => {
     image1, image2,
     totalQty, notes ?? null,
     record.id
-  ).run()
+  ).run())
 
   // Lưu chi tiết doanh số từng sản phẩm
   if (salesArr.length > 0) {
-    await c.env.DB.prepare(`DELETE FROM checkin_sales WHERE checkin_id = ?`).bind(record.id).run()
+    await retryDB(() => c.env.DB.prepare(`DELETE FROM checkin_sales WHERE checkin_id = ?`).bind(record.id).run())
     for (const s of salesArr) {
       if (s.product_id && s.quantity >= 0) {
-        await c.env.DB.prepare(
+        await retryDB(() => c.env.DB.prepare(
           `INSERT INTO checkin_sales (checkin_id, product_id, quantity) VALUES (?, ?, ?)`
-        ).bind(record.id, s.product_id, s.quantity).run()
+        ).bind(record.id, s.product_id, s.quantity).run())
       }
     }
   }
@@ -165,12 +187,12 @@ checkin.post('/end', async (c) => {
   // Lưu chi tiết quà tặng
   const giftsArr: { gift_id: number; quantity: number }[] = Array.isArray(gifts) ? gifts : []
   if (giftsArr.length > 0) {
-    await c.env.DB.prepare(`DELETE FROM checkin_gifts WHERE checkin_id = ?`).bind(record.id).run()
+    await retryDB(() => c.env.DB.prepare(`DELETE FROM checkin_gifts WHERE checkin_id = ?`).bind(record.id).run())
     for (const g of giftsArr) {
       if (g.gift_id && g.quantity > 0) {
-        await c.env.DB.prepare(
+        await retryDB(() => c.env.DB.prepare(
           `INSERT INTO checkin_gifts (checkin_id, gift_id, quantity) VALUES (?, ?, ?)`
-        ).bind(record.id, g.gift_id, g.quantity).run()
+        ).bind(record.id, g.gift_id, g.quantity).run())
       }
     }
   }
@@ -179,13 +201,15 @@ checkin.post('/end', async (c) => {
 })
 
 // ── GET /api/checkin/active ────────────────────────────────────────────────
-// Lượt đang check-in (chưa checkout) hôm nay
+// Lượt đang check-in (chưa checkout) trong 24h qua
 checkin.get('/active', async (c) => {
   const user  = c.get('user')
-  const today = getTodayVN()
   const record = await c.env.DB.prepare(
-    `SELECT * FROM checkins WHERE user_id = ? AND date = ? AND status = 'checkin' LIMIT 1`
-  ).bind(user.id, today).first()
+    `SELECT * FROM checkins
+     WHERE user_id = ? AND status = 'checkin'
+       AND checkin_time > datetime('now', '-24 hours')
+     ORDER BY checkin_time DESC LIMIT 1`
+  ).bind(user.id).first()
   return c.json(ok(record ?? null))
 })
 
