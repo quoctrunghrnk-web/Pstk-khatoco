@@ -11,7 +11,10 @@ window.AdminModule = (() => {
   function formatTime(isoStr) {
     if (!isoStr) return '--'
     try {
-      return new Date(isoStr).toLocaleString('vi-VN', {
+      // D1 stores UTC without TZ (e.g. "2026-05-04 02:58:00")
+      const s = isoStr.includes('T') ? isoStr : isoStr.replace(' ', 'T')
+      const utc = s.endsWith('Z') ? s : s + 'Z'
+      return new Date(utc).toLocaleString('vi-VN', {
         timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit'
       })
     } catch { return '--' }

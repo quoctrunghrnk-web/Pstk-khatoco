@@ -13,7 +13,11 @@ window.CheckinModule = (() => {
   function formatTime(isoStr) {
     if (!isoStr) return '--:--'
     try {
-      return new Date(isoStr).toLocaleTimeString('vi-VN', {
+      // D1 stores UTC without TZ (e.g. "2026-05-04 02:58:00")
+      // Append Z so JS parses as UTC, then format in VN time
+      const s = isoStr.includes('T') ? isoStr : isoStr.replace(' ', 'T')
+      const utc = s.endsWith('Z') ? s : s + 'Z'
+      return new Date(utc).toLocaleTimeString('vi-VN', {
         hour: '2-digit', minute: '2-digit',
         timeZone: 'Asia/Ho_Chi_Minh'
       })
