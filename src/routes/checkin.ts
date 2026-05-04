@@ -28,6 +28,22 @@ function getTodayVN(): string {
   return now.toISOString().slice(0, 10)
 }
 
+// D1 CURRENT_TIMESTAMP returns "YYYY-MM-DD HH:MM:SS" in UTC without TZ
+// Convert to ISO 8601 so JS Date() parses correctly across all timezones
+function toISO(t: string | null | undefined): string | null {
+  if (!t) return t ?? null
+  return t.includes('T') ? t : t.replace(' ', 'T') + 'Z'
+}
+
+function fmtRow(r: any): any {
+  if (!r) return r
+  const out: any = {}
+  for (const [k, v] of Object.entries(r)) {
+    out[k] = typeof v === 'string' ? toISO(v as string) : v
+  }
+  return out
+}
+
 const IMG_MAX_B64_LEN = 380 * 1024
 
 function validateImage(b64: string | null | undefined, label: string): string | null {
@@ -210,7 +226,7 @@ checkin.get('/active', async (c) => {
        AND checkin_time > datetime('now', '-24 hours')
      ORDER BY checkin_time DESC LIMIT 1`
   ).bind(user.id).first()
-  return c.json(ok(record ?? null))
+  return c.json(ok(fmtRow(record) ?? null))
 })
 
 // ── GET /api/checkin/today ─────────────────────────────────────────────────
@@ -234,7 +250,7 @@ checkin.get('/today', async (c) => {
       FROM checkin_gifts cg JOIN gifts g ON cg.gift_id = g.id
       WHERE cg.checkin_id = ?
     `).bind(r.id).all()
-    return { ...r, sales: sales.results, gifts: gifts.results }
+    return { ...fmtRow(r), sales: sales.results, gifts: gifts.results }
   }))
 
   return c.json(ok(records))
@@ -259,7 +275,7 @@ checkin.get('/history', async (c) => {
     'SELECT COUNT(*) as count FROM checkins WHERE user_id = ?'
   ).bind(user.id).first<{ count: number }>()
 
-  return c.json({ success: true, data: records.results, pagination: { page, limit, total: total?.count ?? 0 } })
+  return c.json({ success: true, data: records.results.map(fmtRow), pagination: { page, limit, total: total?.count ?? 0 } })
 })
 
 // ── GET /api/checkin/:id ───────────────────────────────────────────────────
@@ -284,7 +300,7 @@ checkin.get('/:id', async (c) => {
     WHERE cg.checkin_id = ?
   `).bind(id).all()
 
-  return c.json(ok({ ...record, sales: sales.results, gifts: gifts.results }))
+  return c.json(ok({ ...fmtRow(record), sales: sales.results, gifts: gifts.results }))
 })
 
 export default checkin
