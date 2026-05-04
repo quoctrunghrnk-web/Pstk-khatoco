@@ -7,7 +7,7 @@
     "build": "vite build",
     "preview": "wrangler pages dev dist",
     "deploy": "npm run build && wrangler pages deploy dist",
-    "deploy:prod": "npm run build && wrangler pages deploy dist --project-name webapp",
+    "deploy:prod": "npm run build && wrangler pages deploy dist --project-name pstk-khatoco",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "db:migrate:local": "wrangler d1 migrations apply webapp-production --local",
     "db:seed": "wrangler d1 execute webapp-production --local --file=./seed.sql",
