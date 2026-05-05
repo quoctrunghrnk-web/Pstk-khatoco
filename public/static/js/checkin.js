@@ -375,7 +375,7 @@ window.CheckinModule = (() => {
             <div class="flex items-center gap-3 bg-orange-50 rounded-xl px-3 py-2.5 border border-orange-100">
               <span class="flex-1 text-sm font-medium text-gray-700 truncate">
                 <i class="fas fa-wine-bottle mr-1.5 text-orange-400 text-xs"></i>White Horse
-                <span class="text-gray-400 text-xs">(thùng)</span>
+                <span class="text-gray-400 text-xs">(gói)</span>
               </span>
               <div class="flex items-center gap-1.5 flex-shrink-0">
                 <button type="button" onclick="CheckinModule._decQty('stock_wh')"
@@ -392,7 +392,7 @@ window.CheckinModule = (() => {
             <div class="flex items-center gap-3 bg-orange-50 rounded-xl px-3 py-2.5 border border-orange-100">
               <span class="flex-1 text-sm font-medium text-gray-700 truncate">
                 <i class="fas fa-wine-bottle mr-1.5 text-orange-400 text-xs"></i>White Horse Demi
-                <span class="text-gray-400 text-xs">(thùng)</span>
+                <span class="text-gray-400 text-xs">(gói)</span>
               </span>
               <div class="flex items-center gap-1.5 flex-shrink-0">
                 <button type="button" onclick="CheckinModule._decQty('stock_whd')"
@@ -409,7 +409,7 @@ window.CheckinModule = (() => {
             <div class="flex items-center gap-3 bg-orange-50 rounded-xl px-3 py-2.5 border border-orange-100">
               <span class="flex-1 text-sm font-medium text-gray-700 truncate">
                 <i class="fas fa-wine-bottle mr-1.5 text-orange-400 text-xs"></i>Leopard
-                <span class="text-gray-400 text-xs">(thùng)</span>
+                <span class="text-gray-400 text-xs">(gói)</span>
               </span>
               <div class="flex items-center gap-1.5 flex-shrink-0">
                 <button type="button" onclick="CheckinModule._decQty('stock_lp')"
