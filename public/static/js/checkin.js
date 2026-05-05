@@ -13,11 +13,7 @@ window.CheckinModule = (() => {
   function formatTime(isoStr) {
     if (!isoStr) return '--:--'
     try {
-      // D1 stores UTC without TZ (e.g. "2026-05-04 02:58:00")
-      // Append Z so JS parses as UTC, then format in VN time
-      const s = isoStr.includes('T') ? isoStr : isoStr.replace(' ', 'T')
-      const utc = s.endsWith('Z') ? s : s + 'Z'
-      return new Date(utc).toLocaleTimeString('vi-VN', {
+      return new Date(isoStr).toLocaleTimeString('vi-VN', {
         hour: '2-digit', minute: '2-digit',
         timeZone: 'Asia/Ho_Chi_Minh'
       })
@@ -369,6 +365,67 @@ window.CheckinModule = (() => {
                    focus:ring-2 focus:ring-amber-400 resize-none"></textarea>
         </div>
 
+        <!-- Tồn kho 3 sản phẩm -->
+        <div class="mb-4">
+          <label class="block text-sm font-semibold text-gray-700 mb-2">
+            <i class="fas fa-boxes mr-1 text-orange-500"></i>Tồn kho
+            <span class="text-xs text-gray-400 font-normal ml-1">(số lượng còn lại tại điểm bán)</span>
+          </label>
+          <div class="space-y-2">
+            <div class="flex items-center gap-3 bg-orange-50 rounded-xl px-3 py-2.5 border border-orange-100">
+              <span class="flex-1 text-sm font-medium text-gray-700 truncate">
+                <i class="fas fa-wine-bottle mr-1.5 text-orange-400 text-xs"></i>White Horse
+                <span class="text-gray-400 text-xs">(thùng)</span>
+              </span>
+              <div class="flex items-center gap-1.5 flex-shrink-0">
+                <button type="button" onclick="CheckinModule._decQty('stock_wh')"
+                  class="w-7 h-7 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg font-bold text-base
+                         flex items-center justify-center transition-colors">−</button>
+                <input type="number" id="stock_wh" value="0" min="0"
+                  class="w-14 text-center text-sm font-bold border border-orange-200 rounded-lg py-1 bg-white
+                         focus:ring-2 focus:ring-orange-300 outline-none" />
+                <button type="button" onclick="CheckinModule._incQty('stock_wh')"
+                  class="w-7 h-7 bg-green-100 hover:bg-green-200 text-green-600 rounded-lg font-bold text-base
+                         flex items-center justify-center transition-colors">+</button>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 bg-orange-50 rounded-xl px-3 py-2.5 border border-orange-100">
+              <span class="flex-1 text-sm font-medium text-gray-700 truncate">
+                <i class="fas fa-wine-bottle mr-1.5 text-orange-400 text-xs"></i>White Horse Demi
+                <span class="text-gray-400 text-xs">(thùng)</span>
+              </span>
+              <div class="flex items-center gap-1.5 flex-shrink-0">
+                <button type="button" onclick="CheckinModule._decQty('stock_whd')"
+                  class="w-7 h-7 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg font-bold text-base
+                         flex items-center justify-center transition-colors">−</button>
+                <input type="number" id="stock_whd" value="0" min="0"
+                  class="w-14 text-center text-sm font-bold border border-orange-200 rounded-lg py-1 bg-white
+                         focus:ring-2 focus:ring-orange-300 outline-none" />
+                <button type="button" onclick="CheckinModule._incQty('stock_whd')"
+                  class="w-7 h-7 bg-green-100 hover:bg-green-200 text-green-600 rounded-lg font-bold text-base
+                         flex items-center justify-center transition-colors">+</button>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 bg-orange-50 rounded-xl px-3 py-2.5 border border-orange-100">
+              <span class="flex-1 text-sm font-medium text-gray-700 truncate">
+                <i class="fas fa-wine-bottle mr-1.5 text-orange-400 text-xs"></i>Leopard
+                <span class="text-gray-400 text-xs">(thùng)</span>
+              </span>
+              <div class="flex items-center gap-1.5 flex-shrink-0">
+                <button type="button" onclick="CheckinModule._decQty('stock_lp')"
+                  class="w-7 h-7 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg font-bold text-base
+                         flex items-center justify-center transition-colors">−</button>
+                <input type="number" id="stock_lp" value="0" min="0"
+                  class="w-14 text-center text-sm font-bold border border-orange-200 rounded-lg py-1 bg-white
+                         focus:ring-2 focus:ring-orange-300 outline-none" />
+                <button type="button" onclick="CheckinModule._incQty('stock_lp')"
+                  class="w-7 h-7 bg-green-100 hover:bg-green-200 text-green-600 rounded-lg font-bold text-base
+                         flex items-center justify-center transition-colors">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Ảnh check-out -->
         <div class="mb-4">
           <label class="block text-sm font-semibold text-gray-700 mb-1.5">
@@ -419,6 +476,11 @@ window.CheckinModule = (() => {
       const giftsData = collectGifts(_gifts)
       const notes = document.getElementById('co-notes')?.value.trim() || null
 
+      // Collect tồn kho
+      const stockWh  = Math.max(0, parseInt(document.getElementById('stock_wh')?.value || 0))
+      const stockWhd = Math.max(0, parseInt(document.getElementById('stock_whd')?.value || 0))
+      const stockLp  = Math.max(0, parseInt(document.getElementById('stock_lp')?.value || 0))
+
       const btn = document.getElementById('co-modal-submit')
       btn.disabled = true
       btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Đang lưu...'
@@ -434,6 +496,9 @@ window.CheckinModule = (() => {
           notes: notes,
           sales: salesData,
           gifts: giftsData,
+          stock_white_horse: stockWh || null,
+          stock_white_horse_demi: stockWhd || null,
+          stock_leopard: stockLp || null,
         })
         Toast.success('Check-out thành công!')
         closeModal()
@@ -651,10 +716,10 @@ window.CheckinModule = (() => {
       const imgThumb = (label, src) => src
         ? `<div>
              <p class="text-xs text-gray-400 mb-1">${label}</p>
-             <img src="${src}" class="w-full rounded-xl cursor-pointer aspect-[3/4] object-contain bg-black"
+             <img src="${src}" class="w-full rounded-xl cursor-pointer aspect-square object-cover"
                   onclick="Modal.image('${src}')" />
            </div>`
-        : `<div class="aspect-[3/4] bg-gray-50 rounded-xl border border-dashed border-gray-200
+        : `<div class="aspect-square bg-gray-50 rounded-xl border border-dashed border-gray-200
                        flex items-center justify-center">
              <p class="text-xs text-gray-300">${label}</p>
            </div>`

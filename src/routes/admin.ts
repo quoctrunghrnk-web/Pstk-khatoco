@@ -24,22 +24,6 @@ const admin = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
 admin.use('*', authMiddleware, adminMiddleware)
 
-// D1 CURRENT_TIMESTAMP returns "YYYY-MM-DD HH:MM:SS" in UTC
-// Convert to ISO 8601 so JS Date() parses correctly
-function toISO(t: string | null | undefined): string | null {
-  if (!t) return t ?? null
-  return t.includes('T') ? t : t.replace(' ', 'T') + 'Z'
-}
-
-function fmtRow(r: any): any {
-  if (!r) return r
-  const out: any = {}
-  for (const [k, v] of Object.entries(r)) {
-    out[k] = typeof v === 'string' ? toISO(v as string) : v
-  }
-  return out
-}
-
 // ── GET /api/admin/users ──────────────────────────────────────────────────
 admin.get('/users', async (c) => {
   const province = c.req.query('province')
@@ -328,6 +312,7 @@ admin.get('/checkins', async (c) => {
            c.checkin_image1, c.checkin_image2,
            c.checkout_image1, c.checkout_image2,
            c.sales_quantity, c.notes, c.status,
+           c.stock_white_horse, c.stock_white_horse_demi, c.stock_leopard,
            u.id AS user_id, u.full_name, u.username, u.province
     FROM checkins c
     JOIN users u ON u.id = c.user_id
@@ -349,7 +334,7 @@ admin.get('/checkins', async (c) => {
   params.push(limit, offset)
 
   const records = await c.env.DB.prepare(query).bind(...params).all()
-  return c.json(ok(records.results.map(fmtRow)))
+  return c.json(ok(records.results))
 })
 
 // ── GET /api/admin/checkins/:id ───────────────────────────────────────────
@@ -362,7 +347,7 @@ admin.get('/checkins/:id', async (c) => {
   ).bind(id).first()
 
   if (!record) return c.json(err('Không tìm thấy'), 404)
-  return c.json(ok(fmtRow(record)))
+  return c.json(ok(record))
 })
 
 // ── GET /api/admin/reports/summary ───────────────────────────────────────

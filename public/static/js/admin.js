@@ -11,10 +11,7 @@ window.AdminModule = (() => {
   function formatTime(isoStr) {
     if (!isoStr) return '--'
     try {
-      // D1 stores UTC without TZ (e.g. "2026-05-04 02:58:00")
-      const s = isoStr.includes('T') ? isoStr : isoStr.replace(' ', 'T')
-      const utc = s.endsWith('Z') ? s : s + 'Z'
-      return new Date(utc).toLocaleString('vi-VN', {
+      return new Date(isoStr).toLocaleString('vi-VN', {
         timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit'
       })
     } catch { return '--' }
@@ -253,6 +250,9 @@ window.AdminModule = (() => {
             <div class="flex gap-2 pt-1">
               <button id="btn-load-report" class="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl text-sm font-semibold shadow-sm">
                 <i class="fas fa-search mr-1"></i>Xem báo cáo
+              </button>
+              <button id="btn-export-excel-report" class="py-2.5 px-3 bg-gradient-to-r from-emerald-600 to-green-700 text-white rounded-xl text-sm font-semibold shadow-sm" disabled>
+                <i class="fas fa-file-excel"></i>
               </button>
               <button id="btn-export-pdf" class="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold shadow-sm" disabled>
                 <i class="fas fa-file-pdf mr-1"></i>Xuất PDF
@@ -651,6 +651,7 @@ window.AdminModule = (() => {
     el.innerHTML = '<div class="flex justify-center py-8"><i class="fas fa-spinner fa-spin text-red-400 text-2xl"></i></div>'
     summaryEl.classList.add('hidden')
     document.getElementById('btn-export-pdf').disabled = true
+    document.getElementById('btn-export-excel-report').disabled = true
 
     try {
       const params = { limit: 200 }
@@ -676,6 +677,7 @@ window.AdminModule = (() => {
       }
 
       document.getElementById('btn-export-pdf').disabled = false
+      document.getElementById('btn-export-excel-report').disabled = false
 
       el.innerHTML = records.map(r => `
         <div class="bg-white rounded-2xl shadow p-4 cursor-pointer hover:shadow-md transition-shadow"
@@ -706,6 +708,66 @@ window.AdminModule = (() => {
     } catch (e) {
       el.innerHTML = `<p class="text-center text-red-400 py-8">${e.message}</p>`
     }
+  }
+
+  // ── Xuất Excel báo cáo ───────────────────────
+  function exportReportExcel() {
+    if (!_lastReportData || !_lastReportData.length) {
+      Toast.error('Không có dữ liệu báo cáo để xuất Excel'); return
+    }
+
+    const fmtDate = (d) => {
+      if (!d) return ''
+      try {
+        return new Date(d + 'T00:00:00+07:00').toLocaleDateString('vi-VN')
+      } catch { return d }
+    }
+
+    const fmtTime = (isoStr) => {
+      if (!isoStr) return '--'
+      try {
+        return new Date(isoStr).toLocaleString('vi-VN', {
+          timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit'
+        })
+      } catch { return '--' }
+    }
+
+    const wb = XLSX.utils.book_new()
+    const headers = [
+      'STT', 'Họ và tên', 'SĐT', 'Tỉnh/Thành', 'Điểm bán',
+      'Địa chỉ check-in', 'Giờ check-in', 'Giờ check-out',
+      'Trạng thái', 'Số lượng bán', 'Ghi chú',
+      'Tồn kho White Horse', 'Tồn kho White Horse Demi', 'Tồn kho Leopard',
+    ]
+    const rows = _lastReportData.map((r, i) => [
+      i + 1,
+      r.full_name || '',
+      r.username || '',
+      r.province || '',
+      r.store_name || '',
+      r.checkin_address || '',
+      fmtTime(r.checkin_time),
+      fmtTime(r.checkout_time),
+      r.status === 'checkout' ? 'Hoàn thành' : 'Chỉ check-in',
+      r.sales_quantity != null ? r.sales_quantity : '',
+      r.notes || '',
+      r.stock_white_horse != null ? r.stock_white_horse : '',
+      r.stock_white_horse_demi != null ? r.stock_white_horse_demi : '',
+      r.stock_leopard != null ? r.stock_leopard : '',
+    ])
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
+    ws['!cols'] = [
+      { wch: 5 }, { wch: 28 }, { wch: 15 }, { wch: 22 }, { wch: 30 },
+      { wch: 40 }, { wch: 14 }, { wch: 14 },
+      { wch: 16 }, { wch: 14 }, { wch: 36 },
+      { wch: 20 }, { wch: 24 }, { wch: 18 },
+    ]
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Báo cáo chấm công')
+    const today = new Date(Date.now() + 7*60*60*1000).toISOString().slice(0, 10)
+    XLSX.writeFile(wb, `bao-cao-cham-cong-${today}.xlsx`)
+    Toast.success(`Đã xuất ${_lastReportData.length} bản ghi ra file Excel!`)
   }
 
   // ── Xuất PDF ─────────────────────────────────
@@ -850,7 +912,7 @@ body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
 
 /* ── Slide container ── */
 .slide{
-  width:210mm; height:297mm;       /* A4 portrait */
+  width:337mm; height:190mm;       /* 33.87cm × 19.05cm → landscape A4 */
   background:#fff;
   position:relative;
   overflow:hidden;
@@ -938,7 +1000,7 @@ body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
   grid-template-columns:1fr 1fr;
   grid-template-rows:1fr 1fr;
   gap:3mm;
-  height:220mm;
+  height:142mm;
   margin-top:2mm;
 }
 .photo-cell{
@@ -965,9 +1027,9 @@ body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
 }
 .photo-wrap .photo-img{
   width:100%;height:100%;
-  object-fit:contain;
-  background:#000;
+  object-fit:cover;
   border-radius:3px;
+  border:1px solid #ddd;
   display:block;
 }
 .photo-wrap .photo-empty{
@@ -988,11 +1050,11 @@ body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
 @media print{
   body{background:#fff;}
   @page{
-    size:210mm 297mm portrait;
+    size:337mm 190mm landscape;
     margin:0;
   }
   .slide{
-    width:210mm;height:297mm;
+    width:337mm;height:190mm;
     margin:0;
     box-shadow:none;
     page-break-after:always;
@@ -1323,7 +1385,7 @@ ${detailSlides || '<div style="text-align:center;padding:40px;color:#aaa;">Khôn
       if (!r) return
       const imgRow = (label, src) => src
         ? `<div><p class="text-xs text-gray-500 mb-1">${label}</p>
-             <img src="${src}" class="w-full rounded-lg cursor-pointer aspect-[3/4] object-contain bg-black" onclick="Modal.image(this.src)" /></div>`
+             <img src="${src}" class="w-full rounded-lg cursor-pointer" onclick="Modal.image(this.src)" /></div>`
         : ''
       Modal.create(`
         <div class="p-5">
@@ -1426,6 +1488,9 @@ ${detailSlides || '<div style="text-align:center;padding:40px;color:#aaa;">Khôn
       const staffCode = document.getElementById('report-staff-code')?.value || ''
       if (date) loadReport(date, prov, staffCode)
     }
+
+    // Xuất Excel báo cáo
+    document.getElementById('btn-export-excel-report').onclick = exportReportExcel
 
     // Xuất PDF
     document.getElementById('btn-export-pdf').onclick = exportPDF

@@ -28,22 +28,6 @@ function getTodayVN(): string {
   return now.toISOString().slice(0, 10)
 }
 
-// D1 CURRENT_TIMESTAMP returns "YYYY-MM-DD HH:MM:SS" in UTC without TZ
-// Convert to ISO 8601 so JS Date() parses correctly across all timezones
-function toISO(t: string | null | undefined): string | null {
-  if (!t) return t ?? null
-  return t.includes('T') ? t : t.replace(' ', 'T') + 'Z'
-}
-
-function fmtRow(r: any): any {
-  if (!r) return r
-  const out: any = {}
-  for (const [k, v] of Object.entries(r)) {
-    out[k] = typeof v === 'string' ? toISO(v as string) : v
-  }
-  return out
-}
-
 const IMG_MAX_B64_LEN = 380 * 1024
 
 function validateImage(b64: string | null | undefined, label: string): string | null {
@@ -61,23 +45,6 @@ function validateImages(images: [string | null | undefined, string][]): string |
     if (e) return e
   }
   return null
-}
-
-// Retry helper for D1 write contention (SQLite single-writer)
-async function retryDB<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
-  for (let i = 0; i < maxRetries; i++) {
-    try { return await fn() }
-    catch (e: any) {
-      if (i === maxRetries - 1) throw e
-      const msg = e?.message ?? ''
-      if (msg.includes('SQLITE_BUSY') || msg.includes('database is locked') || msg.includes('D1_ERROR')) {
-        await new Promise(r => setTimeout(r, Math.pow(2, i) * 200 + Math.random() * 100))
-        continue
-      }
-      throw e
-    }
-  }
-  throw new Error('unreachable')
 }
 
 // ── GET /api/checkin/products ──────────────────────────────────────────────
@@ -109,13 +76,10 @@ checkin.post('/start', async (c) => {
     return c.json(err('Vui lòng nhập tên điểm bán'), 400)
   }
 
-  // Kiểm tra còn lượt chưa checkout trong 24h qua (không dùng date để tránh midnight bug)
+  // Kiểm tra còn lượt chưa checkout không
   const pending = await c.env.DB.prepare(
-    `SELECT id, store_name FROM checkins
-     WHERE user_id = ? AND status = 'checkin'
-       AND checkin_time > datetime('now', '-24 hours')
-     ORDER BY checkin_time DESC LIMIT 1`
-  ).bind(user.id).first<{ id: number; store_name: string }>()
+    `SELECT id, store_name FROM checkins WHERE user_id = ? AND date = ? AND status = 'checkin' LIMIT 1`
+  ).bind(user.id, today).first<{ id: number; store_name: string }>()
 
   if (pending) {
     return c.json(err(`Bạn chưa check-out điểm "${pending.store_name}". Hãy check-out trước khi đến điểm mới.`), 400)
@@ -128,7 +92,7 @@ checkin.post('/start', async (c) => {
   const imgErr = validateImages([[image1, 'Ảnh 1'], [image2, 'Ảnh 2']])
   if (imgErr) return c.json(err(imgErr), 400)
 
-  const result = await retryDB(() => c.env.DB.prepare(`
+  const result = await c.env.DB.prepare(`
     INSERT INTO checkins (
       user_id, date, store_name,
       checkin_time, checkin_lat, checkin_lng, checkin_address,
@@ -138,7 +102,7 @@ checkin.post('/start', async (c) => {
     user.id, today, store_name.trim(),
     lat ?? null, lng ?? null, address ?? null,
     image1, image2
-  ).run())
+  ).run()
 
   return c.json(ok({ id: result.meta.last_row_id, date: today, store_name: store_name.trim() }, 'Check-in thành công'))
 })
@@ -146,19 +110,17 @@ checkin.post('/start', async (c) => {
 // ── POST /api/checkin/end ──────────────────────────────────────────────────
 checkin.post('/end', async (c) => {
   const user  = c.get('user')
+  const today = getTodayVN()
   const body  = await c.req.json()
 
-  // Lấy lượt đang checkin gần nhất trong 24h qua (không dùng date để tránh midnight bug)
+  // Lấy lượt đang checkin hôm nay
   const record = await c.env.DB.prepare(
-    `SELECT id, status FROM checkins
-     WHERE user_id = ? AND status = 'checkin'
-       AND checkin_time > datetime('now', '-24 hours')
-     ORDER BY checkin_time DESC LIMIT 1`
-  ).bind(user.id).first<{ id: number; status: string }>()
+    `SELECT id, status FROM checkins WHERE user_id = ? AND date = ? AND status = 'checkin' LIMIT 1`
+  ).bind(user.id, today).first<{ id: number; status: string }>()
 
   if (!record) return c.json(err('Bạn chưa check-in hoặc đã check-out rồi'), 400)
 
-  const { lat, lng, address, image1, image2, notes, sales, gifts } = body
+  const { lat, lng, address, image1, image2, notes, sales, gifts, stock_white_horse, stock_white_horse_demi, stock_leopard } = body
 
   // Ảnh check-out bắt buộc
   if (!image1 || !image2) return c.json(err('Vui lòng chụp đủ 2 ảnh check-out'), 400)
@@ -172,12 +134,13 @@ checkin.post('/end', async (c) => {
   const totalQty = salesArr.reduce((sum, s) => sum + (s.quantity || 0), 0)
 
   // Update checkin record
-  await retryDB(() => c.env.DB.prepare(`
+  await c.env.DB.prepare(`
     UPDATE checkins SET
       checkout_time = CURRENT_TIMESTAMP,
       checkout_lat = ?, checkout_lng = ?, checkout_address = ?,
       checkout_image1 = ?, checkout_image2 = ?,
       sales_quantity = ?, notes = ?,
+      stock_white_horse = ?, stock_white_horse_demi = ?, stock_leopard = ?,
       status = 'checkout',
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
@@ -185,17 +148,18 @@ checkin.post('/end', async (c) => {
     lat ?? null, lng ?? null, address ?? null,
     image1, image2,
     totalQty, notes ?? null,
+    stock_white_horse ?? null, stock_white_horse_demi ?? null, stock_leopard ?? null,
     record.id
-  ).run())
+  ).run()
 
   // Lưu chi tiết doanh số từng sản phẩm
   if (salesArr.length > 0) {
-    await retryDB(() => c.env.DB.prepare(`DELETE FROM checkin_sales WHERE checkin_id = ?`).bind(record.id).run())
+    await c.env.DB.prepare(`DELETE FROM checkin_sales WHERE checkin_id = ?`).bind(record.id).run()
     for (const s of salesArr) {
       if (s.product_id && s.quantity >= 0) {
-        await retryDB(() => c.env.DB.prepare(
+        await c.env.DB.prepare(
           `INSERT INTO checkin_sales (checkin_id, product_id, quantity) VALUES (?, ?, ?)`
-        ).bind(record.id, s.product_id, s.quantity).run())
+        ).bind(record.id, s.product_id, s.quantity).run()
       }
     }
   }
@@ -203,12 +167,12 @@ checkin.post('/end', async (c) => {
   // Lưu chi tiết quà tặng
   const giftsArr: { gift_id: number; quantity: number }[] = Array.isArray(gifts) ? gifts : []
   if (giftsArr.length > 0) {
-    await retryDB(() => c.env.DB.prepare(`DELETE FROM checkin_gifts WHERE checkin_id = ?`).bind(record.id).run())
+    await c.env.DB.prepare(`DELETE FROM checkin_gifts WHERE checkin_id = ?`).bind(record.id).run()
     for (const g of giftsArr) {
       if (g.gift_id && g.quantity > 0) {
-        await retryDB(() => c.env.DB.prepare(
+        await c.env.DB.prepare(
           `INSERT INTO checkin_gifts (checkin_id, gift_id, quantity) VALUES (?, ?, ?)`
-        ).bind(record.id, g.gift_id, g.quantity).run())
+        ).bind(record.id, g.gift_id, g.quantity).run()
       }
     }
   }
@@ -217,16 +181,14 @@ checkin.post('/end', async (c) => {
 })
 
 // ── GET /api/checkin/active ────────────────────────────────────────────────
-// Lượt đang check-in (chưa checkout) trong 24h qua
+// Lượt đang check-in (chưa checkout) hôm nay
 checkin.get('/active', async (c) => {
   const user  = c.get('user')
+  const today = getTodayVN()
   const record = await c.env.DB.prepare(
-    `SELECT * FROM checkins
-     WHERE user_id = ? AND status = 'checkin'
-       AND checkin_time > datetime('now', '-24 hours')
-     ORDER BY checkin_time DESC LIMIT 1`
-  ).bind(user.id).first()
-  return c.json(ok(fmtRow(record) ?? null))
+    `SELECT * FROM checkins WHERE user_id = ? AND date = ? AND status = 'checkin' LIMIT 1`
+  ).bind(user.id, today).first()
+  return c.json(ok(record ?? null))
 })
 
 // ── GET /api/checkin/today ─────────────────────────────────────────────────
@@ -250,7 +212,7 @@ checkin.get('/today', async (c) => {
       FROM checkin_gifts cg JOIN gifts g ON cg.gift_id = g.id
       WHERE cg.checkin_id = ?
     `).bind(r.id).all()
-    return { ...fmtRow(r), sales: sales.results, gifts: gifts.results }
+    return { ...r, sales: sales.results, gifts: gifts.results }
   }))
 
   return c.json(ok(records))
@@ -275,7 +237,7 @@ checkin.get('/history', async (c) => {
     'SELECT COUNT(*) as count FROM checkins WHERE user_id = ?'
   ).bind(user.id).first<{ count: number }>()
 
-  return c.json({ success: true, data: records.results.map(fmtRow), pagination: { page, limit, total: total?.count ?? 0 } })
+  return c.json({ success: true, data: records.results, pagination: { page, limit, total: total?.count ?? 0 } })
 })
 
 // ── GET /api/checkin/:id ───────────────────────────────────────────────────
@@ -300,7 +262,7 @@ checkin.get('/:id', async (c) => {
     WHERE cg.checkin_id = ?
   `).bind(id).all()
 
-  return c.json(ok({ ...fmtRow(record), sales: sales.results, gifts: gifts.results }))
+  return c.json(ok({ ...record, sales: sales.results, gifts: gifts.results }))
 })
 
 export default checkin
