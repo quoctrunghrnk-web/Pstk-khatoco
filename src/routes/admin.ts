@@ -334,33 +334,41 @@ admin.get('/checkins', async (c) => {
   const records = await c.env.DB.prepare(query).bind(...params).all()
   const results: any[] = records.results
 
-  // Fetch sales & gifts breakdown cho các checkin này
+  // Fetch sales & gifts breakdown cho các checkin này (batch để tránh too many SQL variables)
   if (results.length > 0) {
-    const ids = results.map((r: any) => r.id)
-    const placeholders = ids.map(() => '?').join(',')
+    const ids: number[] = results.map((r: any) => r.id)
+    const BATCH = 50
 
-    // Lấy chi tiết doanh số từng sản phẩm
-    const salesRows = await c.env.DB.prepare(
-      `SELECT cs.checkin_id, cs.quantity, p.name as product_name
-       FROM checkin_sales cs JOIN products p ON cs.product_id = p.id
-       WHERE cs.checkin_id IN (${placeholders})`
-    ).bind(...ids).all()
+    const allSales: any[] = []
+    const allGifts: any[] = []
 
-    // Lấy chi tiết quà tặng
-    const giftRows = await c.env.DB.prepare(
-      `SELECT cg.checkin_id, cg.quantity, g.name as gift_name
-       FROM checkin_gifts cg JOIN gifts g ON cg.gift_id = g.id
-       WHERE cg.checkin_id IN (${placeholders})`
-    ).bind(...ids).all()
+    for (let i = 0; i < ids.length; i += BATCH) {
+      const batch = ids.slice(i, i + BATCH)
+      const ph = batch.map(() => '?').join(',')
+
+      const salesBatch = await c.env.DB.prepare(
+        `SELECT cs.checkin_id, cs.quantity, p.name as product_name
+         FROM checkin_sales cs JOIN products p ON cs.product_id = p.id
+         WHERE cs.checkin_id IN (${ph})`
+      ).bind(...batch).all()
+      allSales.push(...(salesBatch.results as any[]))
+
+      const giftBatch = await c.env.DB.prepare(
+        `SELECT cg.checkin_id, cg.quantity, g.name as gift_name
+         FROM checkin_gifts cg JOIN gifts g ON cg.gift_id = g.id
+         WHERE cg.checkin_id IN (${ph})`
+      ).bind(...batch).all()
+      allGifts.push(...(giftBatch.results as any[]))
+    }
 
     // Merge vào từng record
     const salesMap: Record<number, any[]> = {}
-    for (const s of salesRows.results as any[]) {
+    for (const s of allSales) {
       if (!salesMap[s.checkin_id]) salesMap[s.checkin_id] = []
       salesMap[s.checkin_id].push(s)
     }
     const giftMap: Record<number, any[]> = {}
-    for (const g of giftRows.results as any[]) {
+    for (const g of allGifts) {
       if (!giftMap[g.checkin_id]) giftMap[g.checkin_id] = []
       giftMap[g.checkin_id].push(g)
     }
