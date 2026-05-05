@@ -332,7 +332,46 @@ admin.get('/checkins', async (c) => {
   params.push(limit, offset)
 
   const records = await c.env.DB.prepare(query).bind(...params).all()
-  return c.json(ok(records.results))
+  const results: any[] = records.results
+
+  // Fetch sales & gifts breakdown cho các checkin này
+  if (results.length > 0) {
+    const ids = results.map((r: any) => r.id)
+    const placeholders = ids.map(() => '?').join(',')
+
+    // Lấy chi tiết doanh số từng sản phẩm
+    const salesRows = await c.env.DB.prepare(
+      `SELECT cs.checkin_id, cs.quantity, p.name as product_name
+       FROM checkin_sales cs JOIN products p ON cs.product_id = p.id
+       WHERE cs.checkin_id IN (${placeholders})`
+    ).bind(...ids).all()
+
+    // Lấy chi tiết quà tặng
+    const giftRows = await c.env.DB.prepare(
+      `SELECT cg.checkin_id, cg.quantity, g.name as gift_name
+       FROM checkin_gifts cg JOIN gifts g ON cg.gift_id = g.id
+       WHERE cg.checkin_id IN (${placeholders})`
+    ).bind(...ids).all()
+
+    // Merge vào từng record
+    const salesMap: Record<number, any[]> = {}
+    for (const s of salesRows.results as any[]) {
+      if (!salesMap[s.checkin_id]) salesMap[s.checkin_id] = []
+      salesMap[s.checkin_id].push(s)
+    }
+    const giftMap: Record<number, any[]> = {}
+    for (const g of giftRows.results as any[]) {
+      if (!giftMap[g.checkin_id]) giftMap[g.checkin_id] = []
+      giftMap[g.checkin_id].push(g)
+    }
+
+    for (const r of results) {
+      r.sales = salesMap[r.id] || []
+      r.gifts = giftMap[r.id] || []
+    }
+  }
+
+  return c.json(ok(results))
 })
 
 // ── GET /api/admin/checkins/:id ───────────────────────────────────────────

@@ -732,12 +732,26 @@ window.AdminModule = (() => {
       } catch { return '--' }
     }
 
+    // Helper lấy quantity theo tên sản phẩm / quà tặng
+    const saleQty = (sales, name) => {
+      if (!sales || !sales.length) return ''
+      const s = sales.find(x => x.product_name === name)
+      return s && s.quantity > 0 ? s.quantity : ''
+    }
+    const giftQty = (gifts, name) => {
+      if (!gifts || !gifts.length) return ''
+      const g = gifts.find(x => x.gift_name === name)
+      return g && g.quantity > 0 ? g.quantity : ''
+    }
+
     const wb = XLSX.utils.book_new()
     const headers = [
       'STT', 'Họ và tên', 'SĐT', 'Tỉnh/Thành', 'Điểm bán',
-      'Địa chỉ check-in', 'Giờ check-in', 'Giờ check-out',
-      'Trạng thái', 'Số lượng bán', 'Ghi chú',
+      'Địa chỉ check-in', 'Giờ check-in', 'Giờ check-out', 'Trạng thái',
       'Tồn kho White Horse', 'Tồn kho White Horse Demi', 'Tồn kho Leopard',
+      'Bán White Horse', 'Bán White Horse Demi', 'Bán Leopard',
+      'Phát bật lửa', 'Phát hộp diêm',
+      'Ghi chú',
     ]
     const rows = _lastReportData.map((r, i) => [
       i + 1,
@@ -749,19 +763,25 @@ window.AdminModule = (() => {
       fmtTime(r.checkin_time),
       fmtTime(r.checkout_time),
       r.status === 'checkout' ? 'Hoàn thành' : 'Chỉ check-in',
-      r.sales_quantity != null ? r.sales_quantity : '',
-      r.notes || '',
       r.stock_white_horse != null ? r.stock_white_horse : '',
       r.stock_white_horse_demi != null ? r.stock_white_horse_demi : '',
       r.stock_leopard != null ? r.stock_leopard : '',
+      saleQty(r.sales, 'White Horse'),
+      saleQty(r.sales, 'White Horse Demi'),
+      saleQty(r.sales, 'Leopard'),
+      giftQty(r.gifts, 'Quà tặng bật lửa'),
+      giftQty(r.gifts, 'Quà tặng hộp diêm'),
+      r.notes || '',
     ])
 
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
     ws['!cols'] = [
       { wch: 5 }, { wch: 28 }, { wch: 15 }, { wch: 22 }, { wch: 30 },
-      { wch: 40 }, { wch: 14 }, { wch: 14 },
-      { wch: 16 }, { wch: 14 }, { wch: 36 },
+      { wch: 40 }, { wch: 14 }, { wch: 14 }, { wch: 16 },
       { wch: 20 }, { wch: 24 }, { wch: 18 },
+      { wch: 18 }, { wch: 22 }, { wch: 16 },
+      { wch: 16 }, { wch: 16 },
+      { wch: 36 },
     ]
 
     XLSX.utils.book_append_sheet(wb, ws, 'Báo cáo chấm công')
