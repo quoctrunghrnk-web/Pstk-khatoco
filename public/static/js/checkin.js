@@ -335,36 +335,6 @@ window.CheckinModule = (() => {
         </h3>
         <p class="text-xs text-gray-400 mb-4">Nhập kết quả cửa hàng bán được và chụp ảnh</p>
 
-        <!-- Doanh số sản phẩm -->
-        <div class="mb-4">
-          <label class="block text-sm font-semibold text-gray-700 mb-2">
-            <i class="fas fa-clipboard-list mr-1 text-blue-500"></i>Doanh số <span class="text-red-500">*</span>
-            <span class="text-xs text-gray-400 font-normal ml-1">(có thể nhập 0 nếu chưa bán được)</span>
-          </label>
-          <div class="space-y-2">${salesHtml}</div>
-        </div>
-
-        <!-- Quà tặng -->
-        ${giftsHtml ? `
-        <div class="mb-4">
-          <label class="block text-sm font-semibold text-gray-700 mb-2">
-            <i class="fas fa-gift mr-1 text-amber-500"></i>Quà tặng
-            <span class="text-xs text-gray-400 font-normal ml-1">(không bắt buộc)</span>
-          </label>
-          <div class="space-y-2">${giftsHtml}</div>
-        </div>` : ''}
-
-        <!-- Ghi chú -->
-        <div class="mb-4">
-          <label class="block text-sm font-semibold text-gray-700 mb-1.5">
-            <i class="fas fa-sticky-note mr-1 text-amber-500"></i>Ghi chú
-          </label>
-          <textarea id="co-notes" rows="2"
-            placeholder="Nhập ghi chú (không bắt buộc)..."
-            class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm outline-none
-                   focus:ring-2 focus:ring-amber-400 resize-none"></textarea>
-        </div>
-
         <!-- Tồn kho 3 sản phẩm -->
         <div class="mb-4">
           <label class="block text-sm font-semibold text-gray-700 mb-2">
@@ -424,6 +394,36 @@ window.CheckinModule = (() => {
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- Doanh số sản phẩm -->
+        <div class="mb-4">
+          <label class="block text-sm font-semibold text-gray-700 mb-2">
+            <i class="fas fa-clipboard-list mr-1 text-blue-500"></i>Doanh số <span class="text-red-500">*</span>
+            <span class="text-xs text-gray-400 font-normal ml-1">(có thể nhập 0 nếu chưa bán được)</span>
+          </label>
+          <div class="space-y-2">${salesHtml}</div>
+        </div>
+
+        <!-- Quà tặng -->
+        ${giftsHtml ? `
+        <div class="mb-4">
+          <label class="block text-sm font-semibold text-gray-700 mb-2">
+            <i class="fas fa-gift mr-1 text-amber-500"></i>Quà tặng
+            <span class="text-xs text-gray-400 font-normal ml-1">(không bắt buộc)</span>
+          </label>
+          <div class="space-y-2">${giftsHtml}</div>
+        </div>` : ''}
+
+        <!-- Ghi chú -->
+        <div class="mb-4">
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+            <i class="fas fa-sticky-note mr-1 text-amber-500"></i>Ghi chú
+          </label>
+          <textarea id="co-notes" rows="2"
+            placeholder="Nhập ghi chú (không bắt buộc)..."
+            class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm outline-none
+                   focus:ring-2 focus:ring-amber-400 resize-none"></textarea>
         </div>
 
         <!-- Ảnh check-out -->
