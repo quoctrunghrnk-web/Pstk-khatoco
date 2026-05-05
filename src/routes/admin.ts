@@ -309,8 +309,6 @@ admin.get('/checkins', async (c) => {
   let query = `
     SELECT c.id, c.date, c.store_name, c.checkin_time, c.checkout_time,
            c.checkin_address, c.checkout_address,
-           c.checkin_image1, c.checkin_image2,
-           c.checkout_image1, c.checkout_image2,
            c.sales_quantity, c.notes, c.status,
            c.stock_white_horse, c.stock_white_horse_demi, c.stock_leopard,
            u.id AS user_id, u.full_name, u.username, u.province
