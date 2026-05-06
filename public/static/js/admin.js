@@ -10,11 +10,7 @@ window.AdminModule = (() => {
   // ── Helpers ──────────────────────────────────
   function formatTime(isoStr) {
     if (!isoStr) return '--'
-    try {
-      return new Date(isoStr).toLocaleString('vi-VN', {
-        timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit'
-      })
-    } catch { return '--' }
+    return APP_CONFIG.formatTimeVN(isoStr).replace('--:--', '--')
   }
 
   // Tạo <select> từ _activeProvinces (đã load)
@@ -220,10 +216,14 @@ window.AdminModule = (() => {
           <div class="space-y-2.5">
             <div>
               <label class="block text-xs font-semibold text-gray-600 mb-1.5">
-                <i class="fas fa-calendar-alt mr-1 text-emerald-500"></i>Ngày báo cáo
+                <i class="fas fa-calendar-alt mr-1 text-emerald-500"></i>Từ ngày — Đến ngày
               </label>
-              <input type="date" id="report-date"
-                class="w-full px-3 py-2 border border-emerald-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-400 bg-emerald-50/30" />
+              <div class="flex gap-2">
+                <input type="date" id="report-date-from"
+                  class="flex-1 px-2 py-2 border border-emerald-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-400 bg-emerald-50/30" />
+                <input type="date" id="report-date-to"
+                  class="flex-1 px-2 py-2 border border-emerald-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-400 bg-emerald-50/30" />
+              </div>
             </div>
             <div>
               <label class="block text-xs font-semibold text-gray-600 mb-1.5">
@@ -565,7 +565,7 @@ window.AdminModule = (() => {
                     </div>`}
                     <div class="flex items-center gap-1.5 col-span-2 text-gray-400">
                       <i class="fas fa-clock w-3.5 text-center"></i>
-                      <span>Tham gia: ${u.created_at ? new Date(u.created_at).toLocaleDateString('vi-VN') : '--'}</span>
+                      <span>Tham gia: ${APP_CONFIG.formatDateVN(u.created_at)}</span>
                     </div>
                   </div>` : ''}
                 </div>
@@ -634,17 +634,18 @@ window.AdminModule = (() => {
     ]
 
     XLSX.utils.book_append_sheet(wb, ws, 'Danh sách nhân viên')
-    const today = new Date(Date.now() + 7*60*60*1000).toISOString().slice(0, 10)
+    const today = APP_CONFIG.todayVN()
     XLSX.writeFile(wb, `danh-sach-nhan-vien-${today}.xlsx`)
     Toast.success(`Đã xuất ${staff.length} nhân viên ra file Excel!`)
   }
 
   // ── Load báo cáo ─────────────────────────────
   let _lastReportData = null
-  let _lastReportDate = ''
+  let _lastReportDateFrom = ''
+  let _lastReportDateTo = ''
   let _lastReportProvince = ''
 
-  async function loadReport(date, province = '', staffCode = '') {
+  async function loadReport(dateFrom, dateTo, province = '', staffCode = '') {
     const el = document.getElementById('report-list')
     const summaryEl = document.getElementById('report-summary')
     if (!el) return
@@ -654,14 +655,17 @@ window.AdminModule = (() => {
     document.getElementById('btn-export-excel-report').disabled = true
 
     try {
-      const params = { limit: 200 }
+      const params = { limit: '200' }
+      if (dateFrom) params.date_from = dateFrom
+      if (dateTo) params.date_to = dateTo
       if (province) params.province = province
       if (staffCode) params.username = staffCode.trim()
-      const res = await API.getAdminCheckins(date, params)
+      const res = await API.getAdminCheckins(null, params)
       const records = res.data || []
 
       _lastReportData = records
-      _lastReportDate = date
+      _lastReportDateFrom = dateFrom
+      _lastReportDateTo = dateTo
       _lastReportProvince = province
 
       const done = records.filter(r => r.status === 'checkout').length
@@ -711,28 +715,24 @@ window.AdminModule = (() => {
   }
 
   // ── Xuất Excel báo cáo ───────────────────────
-  function exportReportExcel() {
-    if (!_lastReportData || !_lastReportData.length) {
+  function exportReportExcel(dataOverride) {
+    const data = dataOverride || _lastReportData
+    if (!data || !data.length) {
       Toast.error('Không có dữ liệu báo cáo để xuất Excel'); return
     }
 
     const fmtDate = (d) => {
       if (!d) return ''
       try {
-        return new Date(d + 'T00:00:00+07:00').toLocaleDateString('vi-VN')
+        return new Date(d + 'T00:00:00+07:00').toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
       } catch { return d }
     }
 
     const fmtTime = (isoStr) => {
       if (!isoStr) return '--'
-      try {
-        return new Date(isoStr).toLocaleString('vi-VN', {
-          timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit'
-        })
-      } catch { return '--' }
+      return APP_CONFIG.formatTimeVN(isoStr).replace('--:--', '--')
     }
 
-    // Helper lấy quantity theo tên sản phẩm / quà tặng
     const saleQty = (sales, name) => {
       if (!sales || !sales.length) return ''
       const s = sales.find(x => x.product_name === name)
@@ -745,20 +745,27 @@ window.AdminModule = (() => {
     }
 
     const wb = XLSX.utils.book_new()
+    const fmtDateOnly = (d) => {
+      if (!d) return ''
+      try {
+        return new Date(d + 'T00:00:00+07:00').toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
+      } catch { return d }
+    }
     const headers = [
       'STT', 'Họ và tên', 'SĐT', 'Tỉnh/Thành', 'Điểm bán',
-      'Địa chỉ check-in', 'Giờ check-in', 'Giờ check-out', 'Trạng thái',
+      'Ngày', 'Địa chỉ check-in', 'Giờ check-in', 'Giờ check-out', 'Trạng thái',
       'Tồn kho White Horse', 'Tồn kho White Horse Demi', 'Tồn kho Leopard',
       'Bán White Horse', 'Bán White Horse Demi', 'Bán Leopard',
       'Phát bật lửa', 'Phát hộp diêm',
       'Ghi chú',
     ]
-    const rows = _lastReportData.map((r, i) => [
+    const rows = data.map((r, i) => [
       i + 1,
       r.full_name || '',
       r.username || '',
       r.province || '',
       r.store_name || '',
+      fmtDateOnly(r.date),
       r.checkin_address || '',
       fmtTime(r.checkin_time),
       fmtTime(r.checkout_time),
@@ -777,7 +784,7 @@ window.AdminModule = (() => {
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
     ws['!cols'] = [
       { wch: 5 }, { wch: 28 }, { wch: 15 }, { wch: 22 }, { wch: 30 },
-      { wch: 40 }, { wch: 14 }, { wch: 14 }, { wch: 16 },
+      { wch: 12 }, { wch: 40 }, { wch: 14 }, { wch: 14 }, { wch: 16 },
       { wch: 20 }, { wch: 24 }, { wch: 18 },
       { wch: 18 }, { wch: 22 }, { wch: 16 },
       { wch: 16 }, { wch: 16 },
@@ -785,9 +792,163 @@ window.AdminModule = (() => {
     ]
 
     XLSX.utils.book_append_sheet(wb, ws, 'Báo cáo chấm công')
-    const today = new Date(Date.now() + 7*60*60*1000).toISOString().slice(0, 10)
-    XLSX.writeFile(wb, `bao-cao-cham-cong-${today}.xlsx`)
-    Toast.success(`Đã xuất ${_lastReportData.length} bản ghi ra file Excel!`)
+    const today = APP_CONFIG.todayVN()
+    const xlDate = _lastReportDateFrom === _lastReportDateTo
+      ? _lastReportDateFrom
+      : `${_lastReportDateFrom}_${_lastReportDateTo}`
+    XLSX.writeFile(wb, `bao-cao-cham-cong-${xlDate}.xlsx`)
+    Toast.success(`Đã xuất ${data.length} bản ghi ra file Excel!`)
+  }
+
+  // ── Xem trước & chỉnh sửa trước khi xuất Excel ──
+  function showReportPreviewModal() {
+    if (!_lastReportData || !_lastReportData.length) {
+      Toast.error('Không có dữ liệu báo cáo để xuất Excel'); return
+    }
+
+    // Deep clone dữ liệu để chỉnh sửa không ảnh hưởng bản gốc
+    const editData = _lastReportData.map(r => {
+      const sales = (r.sales || []).map(s => ({ ...s }))
+      const gifts = (r.gifts || []).map(g => ({ ...g }))
+      return { ...r, sales, gifts }
+    })
+
+    const fmtTime = (isoStr) => {
+      if (!isoStr) return '--'
+      return APP_CONFIG.formatTimeVN(isoStr).replace('--:--', '--')
+    }
+
+    const renderTable = () => {
+      const tbody = document.getElementById('preview-table-body')
+      if (!tbody) return
+      tbody.innerHTML = editData.map((r, i) => `
+        <tr class="border-b border-gray-100 hover:bg-gray-50">
+          <td class="px-2 py-2 text-center text-xs text-gray-500">${i + 1}</td>
+          <td class="px-2 py-2 text-xs font-medium text-gray-800 whitespace-nowrap">${r.full_name || ''}</td>
+          <td class="px-2 py-2 text-xs text-gray-500 font-mono whitespace-nowrap">${r.username || ''}</td>
+          <td class="px-2 py-2 text-xs text-gray-600 whitespace-nowrap">${r.province || ''}</td>
+          <td class="px-1 py-1">
+            <input type="text" data-field="store_name" data-idx="${i}"
+              value="${r.store_name || ''}"
+              class="w-full px-1.5 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-red-400 bg-white min-w-[120px]" />
+          </td>
+          <td class="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">${r.date || ''}</td>
+          <td class="px-1 py-1">
+            <input type="text" data-field="checkin_address" data-idx="${i}"
+              value="${r.checkin_address || ''}"
+              class="w-full px-1.5 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-red-400 bg-white min-w-[160px]" />
+          </td>
+          <td class="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">${fmtTime(r.checkin_time)}</td>
+          <td class="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">${fmtTime(r.checkout_time)}</td>
+          <td class="px-2 py-2 text-xs whitespace-nowrap">
+            <span class="px-1.5 py-0.5 rounded-full text-xs ${r.status === 'checkout' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">${r.status === 'checkout' ? 'Hoàn thành' : 'Đang làm'}</span>
+          </td>
+          <td class="px-1 py-1">
+            <input type="number" data-field="stock_white_horse" data-idx="${i}"
+              value="${r.stock_white_horse != null ? r.stock_white_horse : ''}"
+              class="w-full px-1.5 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-red-400 bg-white min-w-[70px]" />
+          </td>
+          <td class="px-1 py-1">
+            <input type="number" data-field="stock_white_horse_demi" data-idx="${i}"
+              value="${r.stock_white_horse_demi != null ? r.stock_white_horse_demi : ''}"
+              class="w-full px-1.5 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-red-400 bg-white min-w-[70px]" />
+          </td>
+          <td class="px-1 py-1">
+            <input type="number" data-field="stock_leopard" data-idx="${i}"
+              value="${r.stock_leopard != null ? r.stock_leopard : ''}"
+              class="w-full px-1.5 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-red-400 bg-white min-w-[70px]" />
+          </td>
+          <td class="px-1 py-1">
+            <input type="number" data-field="sales_quantity" data-idx="${i}"
+              value="${r.sales_quantity != null ? r.sales_quantity : ''}"
+              class="w-full px-1.5 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-red-400 bg-white min-w-[60px]" />
+          </td>
+          <td class="px-1 py-1">
+            <input type="text" data-field="notes" data-idx="${i}"
+              value="${r.notes || ''}"
+              class="w-full px-1.5 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-red-400 bg-white min-w-[120px]" />
+          </td>
+        </tr>
+      `).join('')
+
+      // Bind input events to sync edits back to editData
+      tbody.querySelectorAll('input').forEach(inp => {
+        inp.addEventListener('input', () => {
+          const idx = parseInt(inp.dataset.idx)
+          const field = inp.dataset.field
+          if (!isNaN(idx) && field && editData[idx]) {
+            let val = inp.value.trim()
+            if (field.startsWith('stock_') || field === 'sales_quantity') {
+              val = val === '' ? null : parseInt(val) || 0
+            }
+            editData[idx][field] = val
+          }
+        })
+      })
+    }
+
+    const { close } = Modal.create(`
+      <div class="flex flex-col" style="max-height:90vh;width:95vw;max-width:1100px;">
+        <!-- Header -->
+        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
+          <div>
+            <h3 class="text-base font-bold text-gray-800">
+              <i class="fas fa-edit mr-2 text-red-500"></i>Xem trước & chỉnh sửa dữ liệu
+            </h3>
+            <p class="text-xs text-gray-400 mt-0.5">${editData.length} bản ghi &middot; Sửa trực tiếp vào ô, sau đó nhấn Xuất Excel</p>
+          </div>
+          <button id="preview-close-btn" class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-auto flex-1" style="max-height:60vh;">
+          <table class="w-full text-xs border-collapse">
+            <thead class="sticky top-0 z-10">
+              <tr class="bg-gray-100 text-gray-600 font-semibold">
+                <th class="px-2 py-2 text-center w-8">STT</th>
+                <th class="px-2 py-2 text-left whitespace-nowrap">Họ và tên</th>
+                <th class="px-2 py-2 text-left whitespace-nowrap">SĐT</th>
+                <th class="px-2 py-2 text-left whitespace-nowrap">Tỉnh/TP</th>
+                <th class="px-1 py-2 text-left whitespace-nowrap bg-yellow-50">Điểm bán *</th>
+                <th class="px-2 py-2 text-left whitespace-nowrap">Ngày</th>
+                <th class="px-1 py-2 text-left whitespace-nowrap bg-yellow-50">Địa chỉ CI *</th>
+                <th class="px-2 py-2 text-left whitespace-nowrap">Giờ CI</th>
+                <th class="px-2 py-2 text-left whitespace-nowrap">Giờ CO</th>
+                <th class="px-2 py-2 text-center whitespace-nowrap">Trạng thái</th>
+                <th class="px-1 py-2 text-left whitespace-nowrap bg-blue-50">TK White Horse</th>
+                <th class="px-1 py-2 text-left whitespace-nowrap bg-blue-50">TK WH Demi</th>
+                <th class="px-1 py-2 text-left whitespace-nowrap bg-blue-50">TK Leopard</th>
+                <th class="px-1 py-2 text-left whitespace-nowrap bg-green-50">Tổng bán</th>
+                <th class="px-1 py-2 text-left whitespace-nowrap bg-yellow-50">Ghi chú *</th>
+              </tr>
+            </thead>
+            <tbody id="preview-table-body"></tbody>
+          </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex items-center justify-between px-4 py-3 border-t border-gray-200 flex-shrink-0 bg-gray-50">
+          <p class="text-xs text-gray-400"><span class="text-yellow-600">*</span> = có thể chỉnh sửa</p>
+          <div class="flex gap-2">
+            <button id="preview-cancel-btn" class="px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-700 hover:bg-gray-100">Hủy</button>
+            <button id="preview-export-btn" class="px-5 py-2 bg-gradient-to-r from-emerald-600 to-green-700 text-white rounded-xl text-sm font-semibold shadow-sm hover:from-emerald-700 hover:to-green-800">
+              <i class="fas fa-file-excel mr-1"></i>Xuất Excel
+            </button>
+          </div>
+        </div>
+      </div>
+    `)
+
+    renderTable()
+
+    document.getElementById('preview-close-btn').onclick = close
+    document.getElementById('preview-cancel-btn').onclick = close
+    document.getElementById('preview-export-btn').onclick = () => {
+      exportReportExcel(editData)
+      close()
+    }
   }
 
   // ── Xuất PDF ─────────────────────────────────
@@ -800,7 +961,62 @@ window.AdminModule = (() => {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Đang tạo...'
     Toast.info('Đang chuẩn bị báo cáo...')
     try {
-      const html = buildPrintHTML(_lastReportData, _lastReportDate, _lastReportProvince)
+      // Tách record mới (có R2 key) và cũ (chỉ có base64)
+      const hasR2 = (r) => r.checkin_image1_r2 || r.checkin_image2_r2 || r.checkout_image1_r2 || r.checkout_image2_r2
+      const newRecords = _lastReportData.filter(r => hasR2(r))
+      const oldRecords = _lastReportData.filter(r => !hasR2(r))
+
+      // 1. Fetch ảnh R2 cho record mới
+      const keysToFetch = new Set()
+      newRecords.forEach(r => {
+        ;['checkin_image1_r2','checkin_image2_r2','checkout_image1_r2','checkout_image2_r2'].forEach(f => {
+          if (r[f]) keysToFetch.add(r[f])
+        })
+      })
+      const keyMap = {}
+      const keys = [...keysToFetch]
+      for (let i = 0; i < keys.length; i += 10) {
+        const batch = keys.slice(i, i + 10)
+        const results = await Promise.all(batch.map(k => API.fetchImageAsDataUrl(k)))
+        batch.forEach((k, j) => { keyMap[k] = results[j] })
+      }
+
+      // 2. Fetch ảnh base64 cho record cũ (batch endpoint, từng record một)
+      const base64Map = {}
+      if (oldRecords.length > 0) {
+        const oldIds = oldRecords.map(r => r.id)
+        const res = await API.getCheckinImages(oldIds)
+        const data = res.data || {}
+        for (const [id, img] of Object.entries(data)) {
+          base64Map[id] = img
+        }
+      }
+
+      // 3. Build enriched records
+      const enriched = _lastReportData.map(r => {
+        const r2k = hasR2(r)
+        if (r2k) {
+          return {
+            ...r,
+            _img1: keyMap[r.checkin_image1_r2] || null,
+            _img2: keyMap[r.checkin_image2_r2] || null,
+            _img3: keyMap[r.checkout_image1_r2] || null,
+            _img4: keyMap[r.checkout_image2_r2] || null,
+          }
+        }
+        const old = base64Map[r.id] || {}
+        return {
+          ...r,
+          _img1: old.checkin_image1 || null,
+          _img2: old.checkin_image2 || null,
+          _img3: old.checkout_image1 || null,
+          _img4: old.checkout_image2 || null,
+        }
+      })
+      const dateLabel = _lastReportDateFrom === _lastReportDateTo
+        ? _lastReportDateFrom
+        : `${_lastReportDateFrom} → ${_lastReportDateTo}`
+      const html = buildPrintHTML(enriched, dateLabel, _lastReportProvince)
       const win = window.open('', '_blank', 'width=900,height=700')
       if (!win) { Toast.error('Trình duyệt đã chặn popup. Vui lòng cho phép.'); return }
       win.document.write(html)
@@ -880,10 +1096,10 @@ window.AdminModule = (() => {
     const detailSlides = records.map(r => {
       storeSeq++
       const staffSeq = staffMap[r.username]?.seq || 0
-      const ci1 = r.checkin_image1  || null
-      const ci2 = r.checkin_image2  || null
-      const co1 = r.checkout_image1 || null
-      const co2 = r.checkout_image2 || null
+      const ci1 = r._img1 || null
+      const ci2 = r._img2 || null
+      const co1 = r._img3 || null
+      const co2 = r._img4 || null
 
       const html = `
 <div class="slide slide-detail">
@@ -928,11 +1144,11 @@ window.AdminModule = (() => {
     // ── CSS ──────────────────────────────────────────────────────
     const css = `
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
+body{font-family:'Segoe UI','Roboto','Noto Sans','Helvetica Neue',Arial,sans-serif;background:#e8e8e8;color:#1a1a1a;}
 
 /* ── Slide container ── */
 .slide{
-  width:337mm; height:190mm;       /* 33.87cm × 19.05cm → landscape A4 */
+  width:210mm; height:297mm;       /* A4 portrait */
   background:#fff;
   position:relative;
   overflow:hidden;
@@ -948,24 +1164,24 @@ body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
 .slide-cover{
   display:flex;
   flex-direction:column;
-  padding:12mm 14mm 10mm;
+  padding:14mm 16mm 12mm;
 }
 .cover-body{
   flex:1;
   display:flex;flex-direction:column;justify-content:flex-start;
 }
 .cover-title{
-  font-size:26pt;font-weight:900;color:#C00000;
-  line-height:1.1;margin-bottom:3mm;margin-top:5mm;
+  font-size:22pt;font-weight:900;color:#C00000;
+  line-height:1.1;margin-bottom:2mm;margin-top:8mm;
 }
-.cover-sub{font-size:26pt;font-weight:900;color:#C00000;line-height:1.1;margin-bottom:3mm;}
-.cover-region{font-size:26pt;font-weight:900;color:#C00000;line-height:1.1;margin-bottom:3mm;}
-.cover-date{font-size:26pt;font-weight:900;color:#C00000;line-height:1.1;margin-bottom:6mm;}
+.cover-sub{font-size:22pt;font-weight:900;color:#C00000;line-height:1.1;margin-bottom:2mm;}
+.cover-region{font-size:22pt;font-weight:900;color:#C00000;line-height:1.1;margin-bottom:2mm;}
+.cover-date{font-size:22pt;font-weight:900;color:#C00000;line-height:1.1;margin-bottom:6mm;}
 
 .cover-table{
-  width:200mm;
+  width:180mm;
   border-collapse:collapse;
-  font-size:13pt;
+  font-size:12pt;
 }
 .cover-table th{
   background:#C00000;color:#fff;
@@ -977,7 +1193,7 @@ body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
 .cover-table td{
   padding:5mm 8mm;
   text-align:center;
-  font-size:18pt;
+  font-size:16pt;
   font-weight:700;
   border:1px solid #ddd;
   background:#fff5f5;
@@ -987,32 +1203,36 @@ body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
    SLIDE 2+ – Chi tiết check-in
 ══════════════════════════════════════════ */
 .slide-detail{
-  padding:4mm 5mm 4mm;
+  padding:5mm 7mm 5mm;
+  display:flex;
+  flex-direction:column;
+  height:100%;
 }
 .detail-seq-badge{
   position:absolute;
-  top:4mm;left:4mm;
+  top:5mm;left:5mm;
   width:7mm;height:7mm;
   background:#C00000;color:#fff;
   border-radius:2px;
   display:flex;align-items:center;justify-content:center;
-  font-size:11pt;font-weight:900;
+  font-size:10pt;font-weight:900;
 }
 .detail-header{
-  margin-left:12mm;
-  margin-bottom:2mm;
+  margin-left:11mm;
+  margin-bottom:3mm;
+  flex-shrink:0;
 }
-.detail-name{font-size:12pt;font-weight:900;line-height:1.2;}
-.detail-phone{font-size:10pt;font-weight:700;color:#333;line-height:1.3;}
-.detail-store{font-size:10pt;font-weight:700;line-height:1.3;display:flex;align-items:center;gap:4px;}
+.detail-name{font-size:11pt;font-weight:900;line-height:1.2;}
+.detail-phone{font-size:9pt;font-weight:700;color:#333;line-height:1.3;}
+.detail-store{font-size:9pt;font-weight:700;line-height:1.3;display:flex;align-items:center;gap:4px;}
 .detail-store-num{
   display:inline-flex;align-items:center;justify-content:center;
   width:5mm;height:5mm;background:#C00000;color:#fff;
   border-radius:50%;font-size:7pt;font-weight:800;margin-left:2mm;
 }
-.detail-addr{font-size:9pt;color:#444;line-height:1.3;}
-.detail-sales{font-size:9pt;color:#c0392b;margin-top:1mm;line-height:1.4;}
-.detail-notes{font-size:9pt;color:#6b7280;line-height:1.4;}
+.detail-addr{font-size:8pt;color:#444;line-height:1.3;}
+.detail-sales{font-size:8pt;color:#c0392b;margin-top:1mm;line-height:1.4;}
+.detail-notes{font-size:8pt;color:#6b7280;line-height:1.4;}
 
 /* ── 2x2 photo grid ── */
 .photo-grid{
@@ -1020,7 +1240,8 @@ body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
   grid-template-columns:1fr 1fr;
   grid-template-rows:1fr 1fr;
   gap:3mm;
-  height:142mm;
+  flex:1;
+  min-height:0;
   margin-top:2mm;
 }
 .photo-cell{
@@ -1030,8 +1251,8 @@ body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
   overflow:hidden;
 }
 .photo-label{
-  font-size:8pt;font-weight:800;
-  padding:1mm 2mm;
+  font-size:7pt;font-weight:800;
+  padding:0.5mm 2mm;
   text-transform:uppercase;
   letter-spacing:.3px;
   flex-shrink:0;
@@ -1044,12 +1265,13 @@ body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
   min-height:0;
   overflow:hidden;
   border-radius:3px;
+  background:#f9f9f9;
 }
 .photo-wrap .photo-img{
   width:100%;height:100%;
-  object-fit:cover;
+  object-fit:contain;
   border-radius:3px;
-  border:1px solid #ddd;
+  border:1px solid #eee;
   display:block;
 }
 .photo-wrap .photo-empty{
@@ -1063,18 +1285,18 @@ body{font-family:'Arial',sans-serif;background:#e8e8e8;color:#1a1a1a;}
 .slide-num{
   position:absolute;
   bottom:3mm;right:5mm;
-  font-size:8pt;color:#888;
+  font-size:7pt;color:#888;
 }
 
 /* ── Print ── */
 @media print{
   body{background:#fff;}
   @page{
-    size:337mm 190mm landscape;
+    size:210mm 297mm;
     margin:0;
   }
   .slide{
-    width:337mm;height:190mm;
+    width:210mm;height:297mm;
     margin:0;
     box-shadow:none;
     page-break-after:always;
@@ -1403,10 +1625,14 @@ ${detailSlides || '<div style="text-align:center;padding:40px;color:#aaa;">Khôn
       const res = await API.getAdminCheckinDetail(id)
       const r = res.data
       if (!r) return
-      const imgRow = (label, src) => src
+      const imgSrc = (r2k, b64) => API.imageUrl(r2k || b64)
+      const imgRow = (label, r2k, b64) => {
+        const src = imgSrc(r2k, b64)
+        return src
         ? `<div><p class="text-xs text-gray-500 mb-1">${label}</p>
              <img src="${src}" class="w-full rounded-lg cursor-pointer" onclick="Modal.image(this.src)" /></div>`
         : ''
+      }
       Modal.create(`
         <div class="p-5">
           <h3 class="text-lg font-bold text-gray-800 mb-1">${r.full_name}</h3>
@@ -1430,10 +1656,10 @@ ${detailSlides || '<div style="text-align:center;padding:40px;color:#aaa;">Khôn
             ${r.sales_quantity!=null?`<p class="text-sm font-medium"><i class="fas fa-box mr-1 text-green-500"></i>Bán: ${r.sales_quantity} SP</p>`:''}
             ${r.notes?`<p class="text-sm text-gray-600"><i class="fas fa-sticky-note mr-1"></i>${r.notes}</p>`:''}
             <div class="grid grid-cols-2 gap-2">
-              ${imgRow('Check-in 1',r.checkin_image1)}${imgRow('Check-in 2',r.checkin_image2)}
+              ${imgRow('Check-in 1',r.checkin_image1_r2,r.checkin_image1)}${imgRow('Check-in 2',r.checkin_image2_r2,r.checkin_image2)}
             </div>
             <div class="grid grid-cols-2 gap-2">
-              ${imgRow('Check-out 1',r.checkout_image1)}${imgRow('Check-out 2',r.checkout_image2)}
+              ${imgRow('Check-out 1',r.checkout_image1_r2,r.checkout_image1)}${imgRow('Check-out 2',r.checkout_image2_r2,r.checkout_image2)}
             </div>
           </div>
         </div>
@@ -1497,20 +1723,23 @@ ${detailSlides || '<div style="text-align:center;padding:40px;color:#aaa;">Khôn
     document.getElementById('btn-export-excel-staff').onclick = exportStaffExcel
 
     // Ngày báo cáo mặc định = hôm nay VN
-    const today = new Date(Date.now() + 7*60*60*1000).toISOString().slice(0,10)
-    const reportDateEl = document.getElementById('report-date')
-    if (reportDateEl) reportDateEl.value = today
+    const today = APP_CONFIG.todayVN()
+    const dateFromEl = document.getElementById('report-date-from')
+    const dateToEl   = document.getElementById('report-date-to')
+    if (dateFromEl) dateFromEl.value = today
+    if (dateToEl) dateToEl.value = today
 
     // Load báo cáo
     document.getElementById('btn-load-report').onclick = () => {
-      const date      = document.getElementById('report-date').value
+      const dateFrom  = document.getElementById('report-date-from')?.value || ''
+      const dateTo    = document.getElementById('report-date-to')?.value || ''
       const prov      = document.getElementById('report-province-filter')?.value || ''
       const staffCode = document.getElementById('report-staff-code')?.value || ''
-      if (date) loadReport(date, prov, staffCode)
+      if (dateFrom || dateTo) loadReport(dateFrom, dateTo, prov, staffCode)
     }
 
-    // Xuất Excel báo cáo
-    document.getElementById('btn-export-excel-report').onclick = exportReportExcel
+    // Xuất Excel báo cáo (xem trước & chỉnh sửa)
+    document.getElementById('btn-export-excel-report').onclick = showReportPreviewModal
 
     // Xuất PDF
     document.getElementById('btn-export-pdf').onclick = exportPDF

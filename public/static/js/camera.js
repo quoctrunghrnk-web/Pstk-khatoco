@@ -1,7 +1,7 @@
 // =============================================
 // Module: Camera
 // Chụp ảnh / chọn file → resize → watermark → nén
-// Pipeline: resizeImage → Watermark.stamp → compressToLimit
+// Pipeline: resizeImage → compressToLimit
 // =============================================
 window.Camera = (() => {
 
@@ -94,27 +94,17 @@ window.Camera = (() => {
     })
   }
 
-  // ── Pipeline đầy đủ: resize → watermark → nén ──
+  // ── Pipeline đầy đủ: resize → nén ──
   /**
    * @param {string} base64   - ảnh thô từ FileReader
    * @param {object|null} geoInfo  - { lat, lng, address } hoặc null
-   * @returns {Promise<string>} base64 đã xử lý, đã có watermark, đã nén
+   * @returns {Promise<string>} base64 đã xử lý, đã nén
    */
   async function processImage(base64, geoInfo) {
     // 1. Resize
     let result = await resizeImage(base64)
 
-    // 2. Watermark — LUÔN chèn dù không có GPS
-    //    Nếu không có địa chỉ sẽ hiện "Chua xac dinh vi tri"
-    if (window.Watermark) {
-      result = await Watermark.stamp(result, {
-        lat:     geoInfo?.lat  ?? null,
-        lng:     geoInfo?.lng  ?? null,
-        address: geoInfo?.address ?? null,
-      })
-    }
-
-    // 3. Nén xuống giới hạn D1 (≤280KB)
+    // 2. Nén xuống giới hạn D1 (<=280KB)
     result = await compressToLimit(result)
 
     return result

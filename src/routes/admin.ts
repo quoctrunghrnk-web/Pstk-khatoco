@@ -17,7 +17,7 @@ import { ok, err } from '../lib/response'
 import { authMiddleware, adminMiddleware } from '../middleware/auth'
 import type { AuthUser } from '../middleware/auth'
 
-type Bindings = { DB: D1Database }
+type Bindings = { DB: D1Database; IMAGES: R2Bucket }
 type Variables = { user: AuthUser }
 
 const admin = new Hono<{ Bindings: Bindings; Variables: Variables }>()
@@ -268,6 +268,7 @@ admin.get('/users/:id/profile', async (c) => {
            p.cccd_number, p.cccd_full_name, p.cccd_dob, p.cccd_gender,
            p.cccd_address, p.cccd_issue_date, p.cccd_expiry_date, p.cccd_issue_place,
            p.cccd_front_image, p.cccd_back_image,
+           p.cccd_front_image_r2, p.cccd_back_image_r2,
            p.bank_account_number, p.bank_name, p.bank_account_name,
            p.updated_at AS profile_updated_at
     FROM users u
@@ -311,6 +312,8 @@ admin.get('/checkins', async (c) => {
            c.checkin_address, c.checkout_address,
            c.sales_quantity, c.notes, c.status,
            c.stock_white_horse, c.stock_white_horse_demi, c.stock_leopard,
+           c.checkin_image1_r2, c.checkin_image2_r2,
+           c.checkout_image1_r2, c.checkout_image2_r2,
            u.id AS user_id, u.full_name, u.username, u.province
     FROM checkins c
     JOIN users u ON u.id = c.user_id
@@ -328,7 +331,7 @@ admin.get('/checkins', async (c) => {
   if (username) { query += ' AND u.username LIKE ?';   params.push(`%${username}%`) }
   if (province) { query += ' AND u.province = ?';      params.push(province) }
 
-  query += ' ORDER BY c.date DESC, c.checkin_time DESC LIMIT ? OFFSET ?'
+  query += ' ORDER BY u.full_name COLLATE NOCASE ASC, c.date DESC, c.checkin_time DESC LIMIT ? OFFSET ?'
   params.push(limit, offset)
 
   const records = await c.env.DB.prepare(query).bind(...params).all()
@@ -380,6 +383,26 @@ admin.get('/checkins', async (c) => {
   }
 
   return c.json(ok(results))
+})
+
+// ── POST /api/admin/checkins/images ────────────────────────────────────────
+// Batch lấy ảnh (base64 cũ + R2 key) cho danh sách checkin IDs
+// Xử lý từng record một để tránh Memory limit exceeded
+admin.post('/checkins/images', async (c) => {
+  const { ids } = await c.req.json()
+  if (!Array.isArray(ids) || ids.length === 0) return c.json(err('ids required'), 400)
+  if (ids.length > 100) return c.json(err('max 100 ids'), 400)
+
+  const result: Record<number, any> = {}
+  for (const id of ids) {
+    const r = await c.env.DB.prepare(
+      `SELECT id, checkin_image1, checkin_image2, checkout_image1, checkout_image2,
+              checkin_image1_r2, checkin_image2_r2, checkout_image1_r2, checkout_image2_r2
+       FROM checkins WHERE id = ?`
+    ).bind(id).first()
+    if (r) result[id] = r
+  }
+  return c.json(ok(result))
 })
 
 // ── GET /api/admin/checkins/:id ───────────────────────────────────────────
