@@ -988,7 +988,42 @@ window.AdminModule = (() => {
     }
   }
 
-  // ── Xuất PDF ─────────────────────────────────
+    // ── Xuất PDF ─────────────────────────────────
+  function showPDFProgress() {
+    const overlay = document.createElement('div')
+    overlay.id = 'pdf-progress-overlay'
+    overlay.className = 'fixed inset-0 z-50 flex items-center justify-center'
+    overlay.style.cssText = 'background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);'
+    overlay.innerHTML = `
+      <div class="bg-white rounded-2xl shadow-2xl p-8 w-80 text-center mx-4">
+        <div class="w-16 h-16 mx-auto mb-4 relative">
+          <i class="fas fa-file-pdf text-red-500 text-5xl animate-pulse"></i>
+        </div>
+        <h3 class="text-base font-bold text-gray-800 mb-1">Đang tạo báo cáo PDF</h3>
+        <p id="pdf-progress-msg" class="text-sm text-gray-500 mb-4">Đang chuẩn bị...</p>
+        <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+          <div id="pdf-progress-bar" class="h-full bg-gradient-to-r from-red-500 to-red-600 rounded-full transition-all duration-500"
+               style="width:0%"></div>
+        </div>
+        <p id="pdf-progress-pct" class="text-xs text-gray-400 mt-2">0%</p>
+      </div>`
+    document.body.appendChild(overlay)
+    return {
+      update: (msg, pct) => {
+        const msgEl = document.getElementById('pdf-progress-msg')
+        const barEl = document.getElementById('pdf-progress-bar')
+        const pctEl = document.getElementById('pdf-progress-pct')
+        if (msgEl) msgEl.textContent = msg
+        if (barEl) barEl.style.width = pct + '%'
+        if (pctEl) pctEl.textContent = Math.round(pct) + '%'
+      },
+      remove: () => {
+        const el = document.getElementById('pdf-progress-overlay')
+        if (el) el.remove()
+      }
+    }
+  }
+
   async function exportPDF() {
     if (!_lastReportData || !_lastReportData.length) {
       Toast.error('Không có dữ liệu để xuất PDF'); return
@@ -996,7 +1031,9 @@ window.AdminModule = (() => {
     const btn = document.getElementById('btn-export-pdf')
     btn.disabled = true
     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Đang tạo...'
-    Toast.info('Đang chuẩn bị báo cáo...')
+
+    const progress = showPDFProgress()
+
     try {
       // Tách record mới (có R2 key) và cũ (chỉ có base64)
       const hasR2 = (r) => r.checkin_image1_r2 || r.checkin_image2_r2 || r.checkout_image1_r2 || r.checkout_image2_r2
@@ -1004,6 +1041,7 @@ window.AdminModule = (() => {
       const oldRecords = _lastReportData.filter(r => !hasR2(r))
 
       // 1. Fetch ảnh R2 cho record mới
+      progress.update('Đang tải ảnh check-in mới...', 5)
       const keysToFetch = new Set()
       newRecords.forEach(r => {
         ;['checkin_image1_r2','checkin_image2_r2','checkout_image1_r2','checkout_image2_r2'].forEach(f => {
@@ -1012,13 +1050,20 @@ window.AdminModule = (() => {
       })
       const keyMap = {}
       const keys = [...keysToFetch]
+      const totalBatches = Math.ceil(keys.length / 10)
       for (let i = 0; i < keys.length; i += 10) {
         const batch = keys.slice(i, i + 10)
         const results = await Promise.all(batch.map(k => API.fetchImageAsDataUrl(k)))
         batch.forEach((k, j) => { keyMap[k] = results[j] })
+        const batchNum = Math.floor(i / 10) + 1
+        progress.update(
+          `Đang tải ảnh check-in... (${batchNum}/${totalBatches})`,
+          5 + Math.round((batchNum / Math.max(totalBatches, 1)) * 25)
+        )
       }
 
-      // 2. Fetch ảnh base64 cho record cũ (batch endpoint, từng record một)
+      // 2. Fetch ảnh base64 cho record cũ
+      progress.update('Đang tải ảnh check-in cũ...', 30)
       const base64Map = {}
       if (oldRecords.length > 0) {
         const oldIds = oldRecords.map(r => r.id)
@@ -1030,6 +1075,7 @@ window.AdminModule = (() => {
       }
 
       // 3. Build enriched records
+      progress.update('Đang ghép dữ liệu...', 35)
       const enriched = _lastReportData.map(r => {
         const r2k = hasR2(r)
         if (r2k) {
@@ -1055,7 +1101,8 @@ window.AdminModule = (() => {
         : `${_lastReportDateFrom} → ${_lastReportDateTo}`
       const html = buildPrintHTML(enriched, dateLabel, _lastReportProvince)
 
-      // Tạo container tạm để render HTML, sau đó dùng html2pdf tạo file tải về
+      // Tạo container tạm
+      progress.update('Đang dựng HTML báo cáo...', 40)
       const container = document.createElement('div')
       container.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;'
       container.innerHTML = html
@@ -1063,6 +1110,8 @@ window.AdminModule = (() => {
 
       const pdfFilename = `bao-cao-nghiem-thu-${dateLabel.replace(/[/\\]/g, '-')}.pdf`
 
+      // 4. Render & tải PDF
+      progress.update('Đang tạo file PDF, vui lòng chờ...', 45)
       await html2pdf().set({
         margin: 0,
         filename: pdfFilename,
@@ -1073,8 +1122,12 @@ window.AdminModule = (() => {
       }).from(container).save()
 
       document.body.removeChild(container)
+      progress.update('Hoàn tất!', 100)
+      await new Promise(r => setTimeout(r, 400))
+      progress.remove()
       Toast.success('Đã xuất file PDF!')
     } catch (e) {
+      progress.remove()
       Toast.error('Lỗi khi tạo PDF: ' + e.message)
     } finally {
       btn.disabled = false
@@ -1082,7 +1135,6 @@ window.AdminModule = (() => {
     }
 
   }
-
   function buildPrintHTML(records, date, province) {
     // ── Helpers ──────────────────────────────────────────────────
     const dateObj = new Date(date + 'T00:00:00+07:00')
