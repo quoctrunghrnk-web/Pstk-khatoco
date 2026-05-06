@@ -1101,31 +1101,19 @@ window.AdminModule = (() => {
         : `${_lastReportDateFrom} → ${_lastReportDateTo}`
       const html = buildPrintHTML(enriched, dateLabel, _lastReportProvince)
 
-      // Tạo container tạm
-      progress.update('Đang dựng HTML báo cáo...', 40)
-      const container = document.createElement('div')
-      container.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;'
-      container.innerHTML = html
-      document.body.appendChild(container)
+            // 4. Mở cửa sổ in (native print → Save as PDF của trình duyệt, nhanh hơn html2pdf)
+      progress.update('Đang mở cửa sổ in...', 90)
+      const win = window.open('', '_blank', 'width=900,height=700')
+      if (!win) { progress.remove(); Toast.error('Trình duyệt đã chặn popup. Vui lòng cho phép.'); return }
+      win.document.write(html)
+      win.document.close()
+      win.focus()
 
-      const pdfFilename = `bao-cao-nghiem-thu-${dateLabel.replace(/[/\\]/g, '-')}.pdf`
-
-      // 4. Render & tải PDF
-      progress.update('Đang tạo file PDF, vui lòng chờ...', 45)
-      await html2pdf().set({
-        margin: 0,
-        filename: pdfFilename,
-        image: { type: 'jpeg', quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['css', 'legacy'] }
-      }).from(container).save()
-
-      document.body.removeChild(container)
       progress.update('Hoàn tất!', 100)
       await new Promise(r => setTimeout(r, 400))
       progress.remove()
-      Toast.success('Đã xuất file PDF!')
+      Toast.success('Đã mở cửa sổ in. Chọn Save as PDF để lưu.')
+      win.onload = () => setTimeout(() => win.print(), 500)
     } catch (e) {
       progress.remove()
       Toast.error('Lỗi khi tạo PDF: ' + e.message)
