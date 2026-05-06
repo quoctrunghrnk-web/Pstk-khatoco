@@ -887,59 +887,68 @@ window.AdminModule = (() => {
       })
     }
 
-    const { close } = Modal.create(`
-      <div class="flex flex-col" style="max-height:90vh;width:95vw;max-width:1100px;">
-        <!-- Header -->
-        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
-          <div>
-            <h3 class="text-base font-bold text-gray-800">
-              <i class="fas fa-edit mr-2 text-red-500"></i>Xem trước & chỉnh sửa dữ liệu
-            </h3>
-            <p class="text-xs text-gray-400 mt-0.5">${editData.length} bản ghi &middot; Sửa trực tiếp vào ô, sau đó nhấn Xuất Excel</p>
-          </div>
-          <button id="preview-close-btn" class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
-            <i class="fas fa-times"></i>
+    // Tạo overlay full-screen thay vì modal nhỏ
+    const overlay = document.createElement('div')
+    overlay.id = 'preview-overlay'
+    overlay.className = 'fixed inset-0 z-50 flex flex-col bg-white'
+    overlay.innerHTML = `
+      <!-- Header -->
+      <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0 bg-white shadow-sm">
+        <div>
+          <h3 class="text-base font-bold text-gray-800">
+            <i class="fas fa-edit mr-2 text-red-500"></i>Xem trước & chỉnh sửa dữ liệu
+          </h3>
+          <p class="text-xs text-gray-400 mt-0.5">${editData.length} bản ghi &middot; Sửa trực tiếp vào ô, sau đó nhấn Xuất Excel</p>
+        </div>
+        <button id="preview-close-btn" class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <!-- Table -->
+      <div class="overflow-auto flex-1">
+        <table class="w-full text-xs border-collapse">
+          <thead class="sticky top-0 z-10">
+            <tr class="bg-gray-100 text-gray-600 font-semibold">
+              <th class="px-2 py-2 text-center w-8">STT</th>
+              <th class="px-2 py-2 text-left whitespace-nowrap">Họ và tên</th>
+              <th class="px-2 py-2 text-left whitespace-nowrap">SĐT</th>
+              <th class="px-2 py-2 text-left whitespace-nowrap">Tỉnh/TP</th>
+              <th class="px-1 py-2 text-left whitespace-nowrap bg-yellow-50">Điểm bán *</th>
+              <th class="px-2 py-2 text-left whitespace-nowrap">Ngày</th>
+              <th class="px-1 py-2 text-left whitespace-nowrap bg-yellow-50">Địa chỉ CI *</th>
+              <th class="px-2 py-2 text-left whitespace-nowrap">Giờ CI</th>
+              <th class="px-2 py-2 text-left whitespace-nowrap">Giờ CO</th>
+              <th class="px-2 py-2 text-center whitespace-nowrap">Trạng thái</th>
+              <th class="px-1 py-2 text-left whitespace-nowrap bg-blue-50">TK White Horse</th>
+              <th class="px-1 py-2 text-left whitespace-nowrap bg-blue-50">TK WH Demi</th>
+              <th class="px-1 py-2 text-left whitespace-nowrap bg-blue-50">TK Leopard</th>
+              <th class="px-1 py-2 text-left whitespace-nowrap bg-green-50">Tổng bán</th>
+              <th class="px-1 py-2 text-left whitespace-nowrap bg-yellow-50">Ghi chú *</th>
+            </tr>
+          </thead>
+          <tbody id="preview-table-body"></tbody>
+        </table>
+      </div>
+
+      <!-- Footer -->
+      <div class="flex items-center justify-between px-4 py-3 border-t border-gray-200 flex-shrink-0 bg-gray-50 shadow-[0_-2px_8px_rgba(0,0,0,0.05)]">
+        <p class="text-xs text-gray-400"><span class="text-yellow-600">*</span> = có thể chỉnh sửa</p>
+        <div class="flex gap-2">
+          <button id="preview-cancel-btn" class="px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-700 hover:bg-gray-100">Hủy</button>
+          <button id="preview-export-btn" class="px-5 py-2 bg-gradient-to-r from-emerald-600 to-green-700 text-white rounded-xl text-sm font-semibold shadow-sm hover:from-emerald-700 hover:to-green-800">
+            <i class="fas fa-file-excel mr-1"></i>Xuất Excel
           </button>
         </div>
-
-        <!-- Table -->
-        <div class="overflow-auto flex-1" style="max-height:60vh;">
-          <table class="w-full text-xs border-collapse">
-            <thead class="sticky top-0 z-10">
-              <tr class="bg-gray-100 text-gray-600 font-semibold">
-                <th class="px-2 py-2 text-center w-8">STT</th>
-                <th class="px-2 py-2 text-left whitespace-nowrap">Họ và tên</th>
-                <th class="px-2 py-2 text-left whitespace-nowrap">SĐT</th>
-                <th class="px-2 py-2 text-left whitespace-nowrap">Tỉnh/TP</th>
-                <th class="px-1 py-2 text-left whitespace-nowrap bg-yellow-50">Điểm bán *</th>
-                <th class="px-2 py-2 text-left whitespace-nowrap">Ngày</th>
-                <th class="px-1 py-2 text-left whitespace-nowrap bg-yellow-50">Địa chỉ CI *</th>
-                <th class="px-2 py-2 text-left whitespace-nowrap">Giờ CI</th>
-                <th class="px-2 py-2 text-left whitespace-nowrap">Giờ CO</th>
-                <th class="px-2 py-2 text-center whitespace-nowrap">Trạng thái</th>
-                <th class="px-1 py-2 text-left whitespace-nowrap bg-blue-50">TK White Horse</th>
-                <th class="px-1 py-2 text-left whitespace-nowrap bg-blue-50">TK WH Demi</th>
-                <th class="px-1 py-2 text-left whitespace-nowrap bg-blue-50">TK Leopard</th>
-                <th class="px-1 py-2 text-left whitespace-nowrap bg-green-50">Tổng bán</th>
-                <th class="px-1 py-2 text-left whitespace-nowrap bg-yellow-50">Ghi chú *</th>
-              </tr>
-            </thead>
-            <tbody id="preview-table-body"></tbody>
-          </table>
-        </div>
-
-        <!-- Footer -->
-        <div class="flex items-center justify-between px-4 py-3 border-t border-gray-200 flex-shrink-0 bg-gray-50">
-          <p class="text-xs text-gray-400"><span class="text-yellow-600">*</span> = có thể chỉnh sửa</p>
-          <div class="flex gap-2">
-            <button id="preview-cancel-btn" class="px-4 py-2 border border-gray-300 rounded-xl text-sm text-gray-700 hover:bg-gray-100">Hủy</button>
-            <button id="preview-export-btn" class="px-5 py-2 bg-gradient-to-r from-emerald-600 to-green-700 text-white rounded-xl text-sm font-semibold shadow-sm hover:from-emerald-700 hover:to-green-800">
-              <i class="fas fa-file-excel mr-1"></i>Xuất Excel
-            </button>
-          </div>
-        </div>
       </div>
-    `)
+    `
+    document.body.appendChild(overlay)
+
+    const close = () => {
+      overlay.remove()
+      document.body.style.overflow = ''
+    }
+    document.body.style.overflow = 'hidden'
 
     renderTable()
 
