@@ -954,7 +954,35 @@ window.AdminModule = (() => {
 
     document.getElementById('preview-close-btn').onclick = close
     document.getElementById('preview-cancel-btn').onclick = close
-    document.getElementById('preview-export-btn').onclick = () => {
+    document.getElementById('preview-export-btn').onclick = async () => {
+      const btn = document.getElementById('preview-export-btn')
+      const origText = btn.innerHTML
+      btn.disabled = true
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Đang lưu...'
+
+      try {
+        // Lưu toàn bộ dữ liệu đã chỉnh sửa vào hệ thống
+        const updates = []
+        for (const r of editData) {
+          updates.push(API.updateAdminCheckin(r.id, {
+            store_name: r.store_name,
+            checkin_address: r.checkin_address,
+            stock_white_horse: r.stock_white_horse,
+            stock_white_horse_demi: r.stock_white_horse_demi,
+            stock_leopard: r.stock_leopard,
+            sales_quantity: r.sales_quantity,
+            notes: r.notes,
+          }))
+        }
+        await Promise.all(updates)
+        Toast.success('Đã lưu ' + editData.length + ' bản ghi vào hệ thống')
+      } catch (e) {
+        Toast.error('Lỗi khi lưu: ' + e.message)
+        btn.disabled = false
+        btn.innerHTML = origText
+        return
+      }
+
       exportReportExcel(editData)
       close()
     }
@@ -1026,16 +1054,33 @@ window.AdminModule = (() => {
         ? _lastReportDateFrom
         : `${_lastReportDateFrom} → ${_lastReportDateTo}`
       const html = buildPrintHTML(enriched, dateLabel, _lastReportProvince)
-      const win = window.open('', '_blank', 'width=900,height=700')
-      if (!win) { Toast.error('Trình duyệt đã chặn popup. Vui lòng cho phép.'); return }
-      win.document.write(html)
-      win.document.close()
-      win.focus()
-      win.onload = () => setTimeout(() => win.print(), 800)
+
+      // Tạo container tạm để render HTML, sau đó dùng html2pdf tạo file tải về
+      const container = document.createElement('div')
+      container.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;'
+      container.innerHTML = html
+      document.body.appendChild(container)
+
+      const pdfFilename = `bao-cao-nghiem-thu-${dateLabel.replace(/[/\\]/g, '-')}.pdf`
+
+      await html2pdf().set({
+        margin: 0,
+        filename: pdfFilename,
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'] }
+      }).from(container).save()
+
+      document.body.removeChild(container)
+      Toast.success('Đã xuất file PDF!')
+    } catch (e) {
+      Toast.error('Lỗi khi tạo PDF: ' + e.message)
     } finally {
       btn.disabled = false
       btn.innerHTML = '<i class="fas fa-file-pdf mr-1"></i>Xuất PDF'
     }
+
   }
 
   function buildPrintHTML(records, date, province) {
