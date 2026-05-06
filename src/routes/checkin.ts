@@ -14,8 +14,9 @@ import { Hono } from 'hono'
 import { ok, err } from '../lib/response'
 import { authMiddleware } from '../middleware/auth'
 import type { AuthUser } from '../middleware/auth'
+import { r2Key, uploadImage } from '../lib/storage'
 
-type Bindings = { DB: D1Database }
+type Bindings = { DB: D1Database; IMAGES: R2Bucket }
 type Variables = { user: AuthUser }
 
 const checkin = new Hono<{ Bindings: Bindings; Variables: Variables }>()
@@ -92,16 +93,22 @@ checkin.post('/start', async (c) => {
   const imgErr = validateImages([[image1, 'Ảnh 1'], [image2, 'Ảnh 2']])
   if (imgErr) return c.json(err(imgErr), 400)
 
+  // Upload images to R2
+  const key1 = r2Key('checkin')
+  const key2 = r2Key('checkin')
+  await uploadImage(c.env.IMAGES, key1, image1)
+  await uploadImage(c.env.IMAGES, key2, image2)
+
   const result = await c.env.DB.prepare(`
     INSERT INTO checkins (
       user_id, date, store_name,
       checkin_time, checkin_lat, checkin_lng, checkin_address,
-      checkin_image1, checkin_image2, status
+      checkin_image1_r2, checkin_image2_r2, status
     ) VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, 'checkin')
   `).bind(
     user.id, today, store_name.trim(),
     lat ?? null, lng ?? null, address ?? null,
-    image1, image2
+    key1, key2
   ).run()
 
   return c.json(ok({ id: result.meta.last_row_id, date: today, store_name: store_name.trim() }, 'Check-in thành công'))
@@ -133,12 +140,18 @@ checkin.post('/end', async (c) => {
   // Tính tổng doanh số
   const totalQty = salesArr.reduce((sum, s) => sum + (s.quantity || 0), 0)
 
+  // Upload checkout images to R2
+  const coKey1 = r2Key('checkin')
+  const coKey2 = r2Key('checkin')
+  await uploadImage(c.env.IMAGES, coKey1, image1)
+  await uploadImage(c.env.IMAGES, coKey2, image2)
+
   // Update checkin record
   await c.env.DB.prepare(`
     UPDATE checkins SET
       checkout_time = CURRENT_TIMESTAMP,
       checkout_lat = ?, checkout_lng = ?, checkout_address = ?,
-      checkout_image1 = ?, checkout_image2 = ?,
+      checkout_image1_r2 = ?, checkout_image2_r2 = ?,
       sales_quantity = ?, notes = ?,
       stock_white_horse = ?, stock_white_horse_demi = ?, stock_leopard = ?,
       status = 'checkout',
@@ -146,7 +159,7 @@ checkin.post('/end', async (c) => {
     WHERE id = ?
   `).bind(
     lat ?? null, lng ?? null, address ?? null,
-    image1, image2,
+    coKey1, coKey2,
     totalQty, notes ?? null,
     stock_white_horse ?? null, stock_white_horse_demi ?? null, stock_leopard ?? null,
     record.id

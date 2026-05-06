@@ -11,13 +11,7 @@ window.CheckinModule = (() => {
 
   // ── Helpers ─────────────────────────────────
   function formatTime(isoStr) {
-    if (!isoStr) return '--:--'
-    try {
-      return new Date(isoStr).toLocaleTimeString('vi-VN', {
-        hour: '2-digit', minute: '2-digit',
-        timeZone: 'Asia/Ho_Chi_Minh'
-      })
-    } catch { return '--:--' }
+    return APP_CONFIG.formatTimeVN(isoStr)
   }
 
   function getStatusBadge(status) {
@@ -713,7 +707,10 @@ window.CheckinModule = (() => {
       const r = res.data
       if (!r) return
 
-      const imgThumb = (label, src) => src
+      const imgSrc = (r2key, b64) => API.imageUrl(r2key || b64)
+      const imgThumb = (label, r2key, b64) => {
+        const src = imgSrc(r2key, b64)
+        return src
         ? `<div>
              <p class="text-xs text-gray-400 mb-1">${label}</p>
              <img src="${src}" class="w-full rounded-xl cursor-pointer aspect-square object-cover"
@@ -723,6 +720,7 @@ window.CheckinModule = (() => {
                        flex items-center justify-center">
              <p class="text-xs text-gray-300">${label}</p>
            </div>`
+      }
 
       const salesDetail = r.sales && r.sales.length > 0
         ? r.sales.filter(s => s.quantity > 0).map(s =>
@@ -783,16 +781,16 @@ window.CheckinModule = (() => {
             <div>
               <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Ảnh Check-in</p>
               <div class="grid grid-cols-2 gap-2">
-                ${imgThumb('Ảnh 1', r.checkin_image1)}
-                ${imgThumb('Ảnh 2', r.checkin_image2)}
+                ${imgThumb('Ảnh 1', r.checkin_image1_r2, r.checkin_image1)}
+                ${imgThumb('Ảnh 2', r.checkin_image2_r2, r.checkin_image2)}
               </div>
             </div>
             ${r.checkout_time ? `
             <div>
               <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Ảnh Check-out</p>
               <div class="grid grid-cols-2 gap-2">
-                ${imgThumb('Ảnh 1', r.checkout_image1)}
-                ${imgThumb('Ảnh 2', r.checkout_image2)}
+                ${imgThumb('Ảnh 1', r.checkout_image1_r2, r.checkout_image1)}
+                ${imgThumb('Ảnh 2', r.checkout_image2_r2, r.checkout_image2)}
               </div>
             </div>` : ''}
           </div>
@@ -808,10 +806,10 @@ window.CheckinModule = (() => {
     function tick() {
       const el = document.getElementById('ci-live-time')
       if (!el) return
-      const now = new Date(Date.now() + 7 * 60 * 60 * 1000)
-      const h = String(now.getUTCHours()).padStart(2, '0')
-      const m = String(now.getUTCMinutes()).padStart(2, '0')
-      const s = String(now.getUTCSeconds()).padStart(2, '0')
+      const now = new Date()
+      const h = String(now.getHours()).padStart(2, '0')
+      const m = String(now.getMinutes()).padStart(2, '0')
+      const s = String(now.getSeconds()).padStart(2, '0')
       el.textContent = `${h}:${m}:${s}`
     }
     tick()
@@ -847,12 +845,12 @@ window.CheckinModule = (() => {
 
   // ── bindEvents ───────────────────────────────
   async function bindEvents() {
-    // Hiện ngày hôm nay
+    // Hiện ngày hôm nay (giờ Việt Nam)
     const dateEl = document.getElementById('ci-date-display')
     if (dateEl) {
-      const now = new Date(Date.now() + 7 * 60 * 60 * 1000)
-      dateEl.textContent = now.toLocaleDateString('vi-VN', {
-        weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC'
+      dateEl.textContent = new Date().toLocaleDateString('vi-VN', {
+        weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
+        timeZone: 'Asia/Ho_Chi_Minh'
       })
     }
 

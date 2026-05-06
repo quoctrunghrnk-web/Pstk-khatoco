@@ -418,6 +418,35 @@ admin.get('/checkins/:id', async (c) => {
   return c.json(ok(record))
 })
 
+// ── PUT /api/admin/checkins/:id ───────────────────────────────────────────
+// Admin sửa dữ liệu check-in (điểm bán, địa chỉ, ghi chú, tồn kho, doanh số)
+admin.put('/checkins/:id', async (c) => {
+  const id = parseInt(c.req.param('id'))
+  if (isNaN(id)) return c.json(err('ID không hợp lệ'), 400)
+
+  const body = await c.req.json()
+  const fields: string[] = []
+  const params: unknown[] = []
+
+  const allowed = ['store_name', 'checkin_address', 'notes', 'sales_quantity',
+                   'stock_white_horse', 'stock_white_horse_demi', 'stock_leopard']
+  for (const f of allowed) {
+    if (body[f] !== undefined) {
+      fields.push(`${f} = ?`)
+      params.push(body[f])
+    }
+  }
+
+  if (!fields.length) return c.json(err('Không có trường nào để cập nhật'), 400)
+
+  params.push(id)
+  await c.env.DB.prepare(
+    `UPDATE checkins SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+  ).bind(...params).run()
+
+  return c.json(ok(null, 'Đã cập nhật'))
+})
+
 // ── GET /api/admin/reports/summary ───────────────────────────────────────
 admin.get('/reports/summary', async (c) => {
   const date     = c.req.query('date')

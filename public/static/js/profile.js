@@ -266,12 +266,14 @@ window.ProfileModule = (() => {
     // CCCD images
     const frontEl = document.getElementById('cccd-front-preview')
     const backEl  = document.getElementById('cccd-back-preview')
-    if (data.cccd_front_image) {
-      frontEl.innerHTML = `<img src="${data.cccd_front_image}" class="w-full h-full object-cover" />`
+    const frontSrc = API.imageUrl(data.cccd_front_image_r2 || data.cccd_front_image)
+    const backSrc  = API.imageUrl(data.cccd_back_image_r2 || data.cccd_back_image)
+    if (frontSrc) {
+      frontEl.innerHTML = `<img src="${frontSrc}" class="w-full h-full object-cover" />`
       frontEl.classList.remove('border-dashed')
     }
-    if (data.cccd_back_image) {
-      backEl.innerHTML = `<img src="${data.cccd_back_image}" class="w-full h-full object-cover" />`
+    if (backSrc) {
+      backEl.innerHTML = `<img src="${backSrc}" class="w-full h-full object-cover" />`
       backEl.classList.remove('border-dashed')
     }
 

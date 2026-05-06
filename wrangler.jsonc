@@ -10,5 +10,11 @@
       "database_name": "nhan-vien-thi-truong-db",
       "database_id": "8557d955-d458-4979-a515-41d1a47079d6"
     }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "IMAGES",
+      "bucket_name": "chamcong-photos"
+    }
   ]
 }

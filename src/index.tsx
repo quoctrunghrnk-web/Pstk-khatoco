@@ -5,6 +5,7 @@
 
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { getImage, r2Key, uploadImage } from './lib/storage'
 
 // Import route modules
 import authRoutes from './routes/auth'
@@ -12,7 +13,7 @@ import profileRoutes from './routes/profile'
 import checkinRoutes from './routes/checkin'
 import adminRoutes from './routes/admin'
 
-type Bindings = { DB: D1Database }
+type Bindings = { DB: D1Database; IMAGES: R2Bucket }
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -22,6 +23,58 @@ app.use('/api/*', cors({
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
 }))
+
+// ── Migration: D1 base64 → R2 (đặt trước admin routes để tránh auth middleware) ──
+app.post('/api/admin/migrate-images', async (c) => {
+  const key = c.req.query('key')
+  if (key !== 'migrate-nk-2026') return c.json({ success: false, message: 'Unauthorized' }, 401)
+
+  const record = await c.env.DB.prepare(`
+    SELECT id, checkin_image1, checkin_image2, checkout_image1, checkout_image2
+    FROM checkins
+    WHERE (checkin_image1 IS NOT NULL AND checkin_image1 LIKE 'data:image/%')
+    AND (checkin_image1_r2 IS NULL)
+    LIMIT 1
+  `).first<{ id: number; checkin_image1: string | null; checkin_image2: string | null; checkout_image1: string | null; checkout_image2: string | null }>()
+
+  if (!record) {
+    const cnt = await c.env.DB.prepare(
+      `SELECT COUNT(*) as c FROM checkins WHERE checkin_image1 IS NOT NULL AND checkin_image1 LIKE 'data:image/%' AND checkin_image1_r2 IS NULL`
+    ).first<{ c: number }>()
+    return c.json({ success: true, data: { migrated: 0, remaining: cnt?.c || 0, done: true } })
+  }
+
+  const imgs: [string, string][] = [
+    ['checkin_image1_r2', record.checkin_image1],
+    ['checkin_image2_r2', record.checkin_image2],
+    ['checkout_image1_r2', record.checkout_image1],
+    ['checkout_image2_r2', record.checkout_image2],
+  ].filter(([, b64]) => b64 && b64.startsWith('data:image/')) as [string, string][]
+
+  const upds: string[] = []
+  const vals: unknown[] = []
+
+  for (const [col, b64] of imgs) {
+    const r2k = r2Key('migrated')
+    try {
+      await uploadImage(c.env.IMAGES, r2k, b64)
+      upds.push(`${col} = ?`)
+      vals.push(r2k)
+    } catch (e: any) {
+      return c.json({ success: false, message: `R2 upload failed: ${e.message}` }, 500)
+    }
+  }
+
+  upds.push('checkin_image1 = NULL, checkin_image2 = NULL, checkout_image1 = NULL, checkout_image2 = NULL')
+  vals.push(record.id)
+  await c.env.DB.prepare(`UPDATE checkins SET ${upds.join(', ')} WHERE id = ?`).bind(...vals).run()
+
+  const remaining = await c.env.DB.prepare(
+    `SELECT COUNT(*) as c FROM checkins WHERE checkin_image1 IS NOT NULL AND checkin_image1 LIKE 'data:image/%' AND checkin_image1_r2 IS NULL`
+  ).first<{ c: number }>()
+
+  return c.json({ success: true, data: { migrated: 1, remaining: remaining?.c || 0 } })
+})
 
 // ── API Routes ───────────────────────────────
 app.route('/api/auth', authRoutes)
@@ -35,7 +88,10 @@ app.onError((e, c) => {
 })
 
 // ── Health check ─────────────────────────────
-app.get('/api/health', (c) => c.json({ status: 'ok', time: new Date().toISOString() }))
+app.get('/api/health', (c) => {
+  const vn = new Date(Date.now() + 7 * 60 * 60 * 1000)
+  return c.json({ status: 'ok', time_vn: vn.toISOString().replace('T', ' ').slice(0, 19) })
+})
 
 // ── Public: danh sách tỉnh/thành (không cần đăng nhập) ──────────────────
 // Dùng cho trang đăng ký nhân viên và hồ sơ
@@ -44,6 +100,14 @@ app.get('/api/provinces', async (c) => {
     'SELECT id, name, sort_order FROM active_provinces ORDER BY sort_order, name'
   ).all()
   return c.json({ success: true, data: rows.results })
+})
+
+// ── Image serving from R2 ──────────────────────
+// Public endpoint — ảnh được phục vụ trực tiếp từ R2 với cache vĩnh viễn
+app.get('/api/images/:key', async (c) => {
+  const key = c.req.param('key')
+  if (!key || key.includes('..')) return c.json({ error: 'Invalid key' }, 400)
+  return getImage(c.env.IMAGES, key)
 })
 
 // Static files are served by Cloudflare Pages for /static/* and /index.html
@@ -97,20 +161,20 @@ app.get('*', (c) => {
 </div>
 <div id="modal-root"></div>
 <div id="toast-root" class="fixed top-4 right-4 z-[9999] space-y-2 pointer-events-none"></div>
-<script src="/static/js/config.js?v=20260504"></script>
-<script src="/static/js/api.js?v=20260504"></script>
-<script src="/static/js/toast.js?v=20260504"></script>
-<script src="/static/js/modal.js?v=20260504"></script>
-<script src="/static/js/camera.js?v=20260504"></script>
-<script src="/static/js/geo.js?v=20260504"></script>
-<script src="/static/js/watermark.js?v=20260504"></script>
-<script src="/static/js/provinces.js?v=20260504"></script>
-<script src="/static/js/auth.js?v=20260504"></script>
-<script src="/static/js/register.js?v=20260504"></script>
-<script src="/static/js/profile.js?v=20260504"></script>
-<script src="/static/js/checkin.js?v=20260504"></script>
-<script src="/static/js/admin.js?v=20260504"></script>
-<script src="/static/js/app.js?v=20260504"></script>
+<script src="/static/js/config.js?v=20260506"></script>
+<script src="/static/js/api.js?v=20260506"></script>
+<script src="/static/js/toast.js?v=20260506"></script>
+<script src="/static/js/modal.js?v=20260506"></script>
+<script src="/static/js/camera.js?v=20260506"></script>
+<script src="/static/js/geo.js?v=20260506"></script>
+<script src="/static/js/watermark.js?v=20260506"></script>
+<script src="/static/js/provinces.js?v=20260506"></script>
+<script src="/static/js/auth.js?v=20260506"></script>
+<script src="/static/js/register.js?v=20260506"></script>
+<script src="/static/js/profile.js?v=20260506"></script>
+<script src="/static/js/checkin.js?v=20260506"></script>
+<script src="/static/js/admin.js?v=20260506"></script>
+<script src="/static/js/app.js?v=20260506"></script>
 </body>
 </html>`)
 })

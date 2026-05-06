@@ -9,8 +9,9 @@ import { Hono } from 'hono'
 import { ok, err } from '../lib/response'
 import { authMiddleware } from '../middleware/auth'
 import type { AuthUser } from '../middleware/auth'
+import { r2Key, uploadImage, deleteImage } from '../lib/storage'
 
-type Bindings = { DB: D1Database }
+type Bindings = { DB: D1Database; IMAGES: R2Bucket }
 type Variables = { user: AuthUser }
 
 const profile = new Hono<{ Bindings: Bindings; Variables: Variables }>()
@@ -26,6 +27,7 @@ profile.get('/', async (c) => {
            p.cccd_number, p.cccd_full_name, p.cccd_dob, p.cccd_gender,
            p.cccd_address, p.cccd_issue_date, p.cccd_expiry_date, p.cccd_issue_place,
            p.cccd_front_image, p.cccd_back_image,
+           p.cccd_front_image_r2, p.cccd_back_image_r2,
            p.bank_account_number, p.bank_name, p.bank_account_name, p.phone,
            p.updated_at
     FROM users u
@@ -105,7 +107,6 @@ profile.post('/upload-cccd', async (c) => {
     return c.json(err('Vui lòng cung cấp ít nhất một ảnh'), 400)
   }
 
-  // Validate base64 size (max 380KB per image — tương ứng ~280KB binary, an toàn cho D1)
   const IMG_MAX_B64 = 380 * 1024
   if (front && (typeof front !== 'string' || !front.startsWith('data:image/') || front.length > IMG_MAX_B64))
     return c.json(err('Ảnh mặt trước không hợp lệ hoặc quá lớn (tối đa 280KB)'), 400)
@@ -113,22 +114,36 @@ profile.post('/upload-cccd', async (c) => {
     return c.json(err('Ảnh mặt sau không hợp lệ hoặc quá lớn (tối đa 280KB)'), 400)
 
   // Ensure profile exists
-  const existing = await c.env.DB.prepare('SELECT id FROM profiles WHERE user_id = ?')
-    .bind(user.id).first<{ id: number }>()
+  const existing = await c.env.DB.prepare('SELECT id, cccd_front_image_r2, cccd_back_image_r2 FROM profiles WHERE user_id = ?')
+    .bind(user.id).first<{ id: number; cccd_front_image_r2: string | null; cccd_back_image_r2: string | null }>()
+
+  // Upload new images to R2, delete old ones
+  let frontKey: string | null = null
+  let backKey: string | null = null
+  if (front) {
+    if (existing?.cccd_front_image_r2) await deleteImage(c.env.IMAGES, existing.cccd_front_image_r2)
+    frontKey = r2Key('cccd')
+    await uploadImage(c.env.IMAGES, frontKey, front)
+  }
+  if (back) {
+    if (existing?.cccd_back_image_r2) await deleteImage(c.env.IMAGES, existing.cccd_back_image_r2)
+    backKey = r2Key('cccd')
+    await uploadImage(c.env.IMAGES, backKey, back)
+  }
 
   if (existing) {
     const updates: string[] = []
     const values: unknown[] = []
-    if (front) { updates.push('cccd_front_image = ?'); values.push(front) }
-    if (back) { updates.push('cccd_back_image = ?'); values.push(back) }
+    if (frontKey) { updates.push('cccd_front_image_r2 = ?'); values.push(frontKey) }
+    if (backKey)  { updates.push('cccd_back_image_r2 = ?'); values.push(backKey) }
     updates.push('updated_at = CURRENT_TIMESTAMP')
     values.push(user.id)
     await c.env.DB.prepare(`UPDATE profiles SET ${updates.join(', ')} WHERE user_id = ?`)
       .bind(...values).run()
   } else {
     await c.env.DB.prepare(
-      'INSERT INTO profiles (user_id, cccd_front_image, cccd_back_image) VALUES (?, ?, ?)'
-    ).bind(user.id, front ?? null, back ?? null).run()
+      'INSERT INTO profiles (user_id, cccd_front_image_r2, cccd_back_image_r2) VALUES (?, ?, ?)'
+    ).bind(user.id, frontKey, backKey).run()
   }
 
   return c.json(ok(null, 'Upload ảnh CCCD thành công'))
