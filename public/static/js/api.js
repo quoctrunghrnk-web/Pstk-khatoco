@@ -83,11 +83,38 @@ window.API = (() => {
       return request('GET', `/admin/checkins?${q}`)
     },
     getAdminCheckinDetail: (id) => request('GET', `/admin/checkins/${id}`),
+    updateAdminCheckin: (id, data) => request('PUT', `/admin/checkins/${id}`, data),
+    getCheckinImages: (ids) => request('POST', '/admin/checkins/images', { ids }),
     getAdminSummary: (params = {}) => {
       const q = new URLSearchParams(params)
       return request('GET', `/admin/reports/summary?${q}`)
     },
     getProvinces: () => request('GET', '/admin/reports/provinces'),
+
+    // Helper: resolve image src from R2 key, old base64, or URL
+    imageUrl: (keyOrBase64) => {
+      if (!keyOrBase64) return null
+      if (keyOrBase64.startsWith('data:image/')) return keyOrBase64
+      if (keyOrBase64.startsWith('http')) return keyOrBase64
+      return `${BASE}/images/${keyOrBase64}`
+    },
+
+    // Helper: fetch image from API and return data URL (for PDF embedding)
+    fetchImageAsDataUrl: async (key) => {
+      if (!key) return null
+      if (key.startsWith('data:image/')) return key
+      try {
+        const url = key.startsWith('http') ? key : `${BASE}/images/${key}`
+        const res = await fetch(url)
+        if (!res.ok) return null
+        const blob = await res.blob()
+        return new Promise((resolve) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(reader.result)
+          reader.readAsDataURL(blob)
+        })
+      } catch { return null }
+    },
 
     // Public: danh sách tỉnh/thành hoạt động (không cần đăng nhập)
     getActiveProvinces: () => request('GET', '/provinces'),
